@@ -26,3 +26,4 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 ### Pull requests
 
 - Never merge pull requests. Open them and leave merging to a human.
+- Whenever you push to a pull request, update its title and description to cover everything it now contains.
