@@ -54,3 +54,7 @@ Before running a headless or nested GNOME Shell, or `gnome-shell-test-tool`, rea
 - Open pull requests and leave merging to a human; never merge one yourself.
 - Stage by explicit path (`git add <paths>`) and check `git status` before committing: untracked output from another branch (e.g. `prototype/smoke-out/`, ignored only on the prototype branch) survives `git switch`.
 - Whenever you push to a pull request, update its title and description to cover everything it now contains.
+
+### Merge conflicts
+
+- Invoke `/mattpocock-skills:resolving-merge-conflicts` the moment a merge or rebase reports a conflict, before opening any conflicted file.
