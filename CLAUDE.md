@@ -16,14 +16,14 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 ### Grilling
 
-- Ask **one** question per round, or two or three only when they are tightly coupled (answering one changes the others). Don't dump the whole frontier at once.
-- Number questions as `Q<n>/<total>`, where `<total>` is the number of questions in that round (e.g. `Q1/2`, `Q2/2`).
+- Ask one question per round; two or three only when tightly coupled. This overrides the grilling skill's whole-frontier rounds.
+- Number questions `Q<n>/<total>` within the round, e.g. `Q1/2`, `Q2/2`.
 
 ### Subagents
 
-- Ask before starting research subagents, even when a skill (e.g. `wayfinder` charting) says to fire them automatically.
+- Ask before starting research subagents, even when a skill (e.g. `wayfinder` charting) says to start them automatically.
 
 ### Pull requests
 
-- Never merge pull requests. Open them and leave merging to a human.
+- Open pull requests and leave merging to a human; never merge one yourself.
 - Whenever you push to a pull request, update its title and description to cover everything it now contains.
