@@ -1,0 +1,7 @@
+{
+  "uuid": "battery-charging-prototype@stanleygoldman.github.io",
+  "name": "Battery Charging (PROTOTYPE)",
+  "description": "Throwaway prototype for issue #11: switch Battery Charging between Maximize Charge and Preserve Battery Health from Quick Settings.",
+  "shell-version": ["48", "49", "50"],
+  "url": "https://github.com/StanleyGoldman/gnome-battery-charging-ext/issues/11"
+}
