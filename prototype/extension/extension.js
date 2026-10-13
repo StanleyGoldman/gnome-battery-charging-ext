@@ -17,6 +17,9 @@ import {PACKAGE_VERSION} from 'resource:///org/gnome/shell/misc/config.js';
 
 const SHELL_MAJOR = parseInt(PACKAGE_VERSION.split('.')[0]);
 const USE_SESSION_BUS = GLib.getenv('BATTERY_CHARGING_PROTO_BUS') === 'session';
+// Variant knobs for #5's text question (see ../variants.sh).
+const TITLE = GLib.getenv('BATTERY_CHARGING_PROTO_TITLE') || 'Battery Charging';
+const COL_SPAN = parseInt(GLib.getenv('BATTERY_CHARGING_PROTO_COLSPAN') || '1');
 
 const UPOWER_NAME = 'org.freedesktop.UPower';
 const UPOWER_PATH = '/org/freedesktop/UPower';
@@ -53,7 +56,7 @@ function log(msg) {
 const BatteryChargingToggle = GObject.registerClass(
 class BatteryChargingToggle extends QuickMenuToggle {
     _init(extension) {
-        const params = {title: 'Battery Charging'};
+        const params = {title: TITLE};
         // 49+ only: an unknown construct property throws on 48.
         if (SHELL_MAJOR >= 49)
             params.menuButtonAccessibleName = 'Open battery charging menu';
@@ -246,7 +249,7 @@ class BatteryChargingIndicator extends SystemIndicator {
 export default class BatteryChargingPrototype extends Extension {
     enable() {
         this._indicator = new BatteryChargingIndicator(this);
-        Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
+        Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator, COL_SPAN);
     }
 
     disable() {

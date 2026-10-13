@@ -27,7 +27,7 @@ async function screenshot(name) {
 
 function findToggle() {
     const qs = Main.panel.statusArea.quickSettings;
-    return qs.menu._grid.get_children().find(c => c.title === 'Battery Charging');
+    return qs.menu._grid.get_children().find(c => c.constructor.name === 'BatteryChargingToggle');
 }
 
 function report(toggle, label) {
