@@ -1,0 +1,8 @@
+{
+  "uuid": "battery-charging@stanleygoldman.github.io",
+  "name": "Battery Charging",
+  "description": "Switch Battery Charging between Maximize Charge and Preserve Battery Health from Quick Settings.",
+  "shell-version": ["48", "49", "50"],
+  "gettext-domain": "battery-charging@stanleygoldman.github.io",
+  "url": "https://github.com/StanleyGoldman/gnome-battery-charging-ext"
+}
