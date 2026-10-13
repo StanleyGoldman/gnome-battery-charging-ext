@@ -18,3 +18,7 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 - Ask **one** question per round, or two or three only when they are tightly coupled (answering one changes the others). Don't dump the whole frontier at once.
 - Number questions as `Q<n>/<total>`, where `<total>` is the number of questions in that round (e.g. `Q1/2`, `Q2/2`).
+
+### Subagents
+
+- Ask before starting research subagents, even when a skill (e.g. `wayfinder` charting) says to fire them automatically.
