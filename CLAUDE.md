@@ -2,15 +2,15 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues on StanleyGoldman/gnome-battery-charging-ext (via the `gh` CLI). See `docs/agents/issue-tracker.md` before creating, reading, labelling or closing an issue.
+Issues live in GitHub Issues on StanleyGoldman/gnome-battery-charging-ext (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md` before applying a triage label.
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md` before exploring the code or naming a domain concept.
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 ## Working preferences
 
