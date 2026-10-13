@@ -49,6 +49,7 @@ HELP = '''commands (NAME is e.g. BAT0):
   ok NAME                               stop failing
   delay SECONDS                         delay every EnableChargeThreshold reply
   state                                 print all batteries
+  vanish | return                       give up / retake the bus name (UPower restarting)
   quit                                  stop the mock (like UPower going away)'''
 
 upower_iface = Gio.DBusNodeInfo.new_for_xml(UPOWER_XML).interfaces[0]
@@ -147,7 +148,7 @@ def remove(name):
 
 
 def command(line):
-    global delay
+    global delay, owner_id
     words = line.split()
     if not words:
         return
@@ -172,6 +173,11 @@ def command(line):
             delay = float(args[0])
         elif cmd == 'state':
             pass
+        elif cmd == 'vanish':
+            Gio.bus_unown_name(owner_id)
+            owner_id = None
+        elif cmd == 'return':
+            owner_id = own_name()
         elif cmd == 'quit':
             loop.quit()
             return
@@ -209,12 +215,19 @@ def on_name_acquired(_conn, name):
 
 
 def on_name_lost(_conn, name):
+    if owner_id is None:  # we gave it up with `vanish`
+        return
     print(f'could not own {name} on the session bus', file=sys.stderr)
     loop.quit()
 
 
-Gio.bus_own_name(Gio.BusType.SESSION, NAME, Gio.BusNameOwnerFlags.NONE,
-                 on_bus, on_name_acquired, on_name_lost)
+def own_name():
+    # Objects stay registered across vanish/return; only the name comes and goes.
+    return Gio.bus_own_name(Gio.BusType.SESSION, NAME, Gio.BusNameOwnerFlags.NONE,
+                            None if conn else on_bus, on_name_acquired, on_name_lost)
+
+
+owner_id = own_name()
 GLib.io_add_watch(GLib.IOChannel.unix_new(sys.stdin.fileno()), GLib.PRIORITY_DEFAULT,
                   GLib.IOCondition.IN | GLib.IOCondition.HUP, on_stdin)
 loop.run()

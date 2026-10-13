@@ -13,6 +13,8 @@ The questions it answers, and its findings, live in the draft PR's description.
 | `pack.sh` | Builds the installable zip into `dist/`. |
 | `smoke-test.sh` / `smoke-test.js` | A headless run (50+) against the mock: it clicks the toggle and opens the menu, writing screenshots to `smoke-out/`. No display or installs needed. |
 | `variants.sh` | Screenshots #5's text variants (two columns, short title, truncate) headlessly into one comparison image. |
+| `scenarios.sh` / `scenarios.js` | Headless runs of the #7 / #8 cases (refusals, slow replies, double clicks, several batteries, batteries and UPower coming and going), driving the mock through a FIFO. It prints a `SCENARIO` log and writes screenshots to `smoke-out/scenarios/`. |
+| `scenario-sheet.py` | Crops the scenario screenshots into one labelled sheet (`sheet.png`). Needs Pillow. |
 | `run-nested.sh` | Opens a nested GNOME Shell window to try the prototype by hand against the mock. Needs `sudo apt install mutter-dev-bin`. **Untested so far.** |
 | `screenshots/` | Output of the smoke and variant runs on GNOME Shell 50.1. |
 
@@ -23,8 +25,9 @@ the prefix `[battery-charging]`.
 ## Running it
 
 - **Headless (quickest):** `./smoke-test.sh`, then look in `smoke-out/`.
+- **#7 / #8 scenarios, headless:** `./scenarios.sh && python3 scenario-sheet.py`.
 - **Nested window, by hand:** `./run-nested.sh BAT0:enabled BAT1`. That terminal becomes the mock's
-  prompt (try `fail BAT1`, `delay 3`, `remove BAT0`, `quit`).
+  prompt (try `fail BAT1`, `delay 3`, `remove BAT0`, `vanish`, `return`, `quit`).
 - **Your real session, against your real battery:**
   ```sh
   gnome-extensions install --force "$(./pack.sh)"
