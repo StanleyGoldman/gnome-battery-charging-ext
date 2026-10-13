@@ -21,7 +21,8 @@ Before running a headless or nested GNOME Shell, or `gnome-shell-test-tool`, rea
 ### Grilling
 
 - Ask one question per round; two or three only when tightly coupled. This overrides the grilling skill's whole-frontier rounds.
-- Number questions `Q<n>/<total>` within the round, e.g. `Q1/2`, `Q2/2`.
+- Number questions `Q<n>/<total>` across the ticket's whole grilling session: `n` is the question's position in that ticket, `total` your current estimate of the questions it needs. Revise `total` as answers come in, e.g. `Q3/5`, then `Q4/7`.
+- When the user has no strong preference on a ticket, answer its remaining questions with your recommendations, then summarize the decisions and flag anything surprising, such as an answer that contradicts an earlier decision.
 
 ### Subagents
 
@@ -41,6 +42,11 @@ Before running a headless or nested GNOME Shell, or `gnome-shell-test-tool`, rea
 
 - When you hit friction (a tool gotcha, a wrong assumption, a repeated workaround), record the lesson in the doc where the next agent will look, written with the `writing-for-agents` skill.
 - Write scripts or skills whenever they help you get a task done; write skills with the `writing-for-agents` skill.
+
+### Worktrees
+
+- The main checkout in the repo folder belongs to the user; keep its branch as the user left it.
+- Do branch work (practice and doc updates, fixes, PR branches) in a git worktree. A subagent in its own worktree makes such a fix in the background.
 
 ### Pull requests
 
