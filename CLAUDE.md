@@ -50,6 +50,7 @@ Before running a headless or nested GNOME Shell, or `gnome-shell-test-tool`, rea
 
 ### Pull requests
 
+- Implementation ends with a pull request: after the review fixes are committed, push the branch and open a PR that closes the ticket (`Closes #<n>`). This extends the `implement` skill, which stops at the commit.
 - Open pull requests and leave merging to a human; never merge one yourself.
 - Stage by explicit path (`git add <paths>`) and check `git status` before committing: untracked output from another branch (e.g. `prototype/smoke-out/`, ignored only on the prototype branch) survives `git switch`.
 - Whenever you push to a pull request, update its title and description to cover everything it now contains.
