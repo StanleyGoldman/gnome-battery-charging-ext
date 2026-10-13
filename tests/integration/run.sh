@@ -4,6 +4,13 @@
 #
 #   run.sh ZIP [OUT_DIR]     logs, and screenshots of failures, land in OUT_DIR
 set -euo pipefail
+
+# Headless shells share one Wayland display, so only one can run per user session.
+# Queue behind any other run. The children don't inherit the lock, so the kernel drops it
+# when this process exits.
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/battery-charging-integration.lock"
+flock -n 9 || { echo "Waiting for another integration run to finish..."; flock 9; }
+
 here=$(cd "$(dirname "$0")" && pwd)
 zip=$(realpath "$1")
 out=$(realpath -m "${2:-$here/out}")
@@ -30,7 +37,7 @@ run_pass() {
         LANGUAGE=$language LANG=en_US.UTF-8 \
             gnome-shell-test-tool --headless --disable-animations --extension "$zip" \
             "$here/shell-test.js" > "$out/$name.log" 2>&1 || true
-    ' _ "$here" "$zip" "$out" "$name" "$language" 2>/dev/null || true
+    ' _ "$here" "$zip" "$out" "$name" "$language" 9>&- 2>/dev/null || true
 }
 
 failed=0

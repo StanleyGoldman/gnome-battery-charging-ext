@@ -21,8 +21,11 @@ user's session stays untouched. Its gotchas:
 - **Call `global.context.terminate()` on every path**, including when `run()` fires. A run that
   never terminates leaves a headless `gnome-shell --automation-script` holding the Wayland display
   lock, and every later run then dies at "Failed to create_socket" with no tests logged. Look for
-  it with `ps -eo pid,args | awk '/[a]utomation-script/'` and `kill -9` it. Don't `pkill -f` from
-  the Bash tool: the pattern matches the tool's own command line.
+  it with `ps -eo pid,args | awk '/[a]utomation-script/'` and `kill -9` it once no `run.sh` is
+  running. Don't `pkill -f` from the Bash tool: the pattern matches the tool's own command line.
+- **Runs queue.** `run.sh` holds a `flock` on `$XDG_RUNTIME_DIR/battery-charging-integration.lock`
+  for the whole run, so concurrent `make test-integration` runs wait their turn ("Waiting for
+  another integration run..."), and a timed-out run's lock is free while its stuck shell lingers.
 - Wrap runs in `timeout` and in `dbus-run-session`, and kill any background helpers (a mock
   service, `sleep infinity`) on exit.
 
@@ -47,6 +50,5 @@ on BAT0`) to see which calls arrived. `return` is a no-op while the mock still o
 ## Translations and parallel runs
 
 - **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
-- **A young headless shell is another session's live run** (the display-lock bullet above): wait for it, and kill only an old one. `ps -eo pid,etime,args | awk '/[a]utomation-script/'` shows the age.
 - **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
 - **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.
