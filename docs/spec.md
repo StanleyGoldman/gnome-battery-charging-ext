@@ -57,9 +57,9 @@ Source: #4, #5, #8.
 
 **Which batteries count.** A device is a **supporting battery** when `Type == 2` (Battery), `PowerSupply == true` and `ChargeThresholdSupported == true`.
 - Peripheral batteries and batteries without support are ignored.
-- When UPower's display device is a UPS, the extension treats the machine as having no supporting battery.
+- The display device's `Type` is the only thing read from `DisplayDevice`, and only for this rule: `Type == 3` (UPS) means the machine has no supporting battery. It is read whenever devices are enumerated, at startup and each time UPower reappears. A display device that changes to or from UPS while UPower is running gets no reaction until the next enumeration.
 - `ChargeThresholdSettingsSupported`, `ChargeStartThreshold` and `ChargeEndThreshold` are never read.
-- `DisplayDevice` is never used for state and never called.
+- Nothing else on `DisplayDevice` is read, and no method is ever called on it. In particular its `ChargeThreshold*` copies are ignored: UPower 1.90.10+ copies `ChargeThresholdEnabled` onto it while reporting `ChargeThresholdSupported = false`, and `EnableChargeThreshold` isn't wired up there.
 
 **Reading state.**
 - Lit, and the menu ticks Preserve Battery Health, when **any** supporting battery has `ChargeThresholdEnabled == true`. There is no third "mixed" state.
