@@ -4,6 +4,12 @@
 #
 #   run.sh ZIP [OUT_DIR]     logs, and screenshots of failures, land in OUT_DIR
 set -euo pipefail
+
+# Headless shells share one Wayland display, so only one can run per user session.
+# Queue behind any other run; the kernel drops the lock when this process exits.
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/battery-charging-integration.lock"
+flock 9
+
 here=$(cd "$(dirname "$0")" && pwd)
 zip=$(realpath "$1")
 out=$(realpath -m "${2:-$here/out}")

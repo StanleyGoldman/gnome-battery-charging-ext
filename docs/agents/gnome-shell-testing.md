@@ -21,8 +21,10 @@ user's session stays untouched. Its gotchas:
 - **Call `global.context.terminate()` on every path**, including when `run()` fires. A run that
   never terminates leaves a headless `gnome-shell --automation-script` holding the Wayland display
   lock, and every later run then dies at "Failed to create_socket" with no tests logged. Look for
-  it with `ps -eo pid,args | awk '/[a]utomation-script/'` and `kill -9` it. Don't `pkill -f` from
-  the Bash tool: the pattern matches the tool's own command line.
+  it with `ps -eo pid,args | awk '/[a]utomation-script/'` and `kill -9` it, but only when no live
+  `run.sh` is behind it: `run.sh` takes a `flock` so concurrent `make test-integration` runs
+  queue (one headless shell per user session, all on the display `gnome-shell-test-display`).
+  Don't `pkill -f` from the Bash tool: the pattern matches the tool's own command line.
 - Wrap runs in `timeout` and in `dbus-run-session`, and kill any background helpers (a mock
   service, `sleep infinity`) on exit.
 
