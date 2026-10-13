@@ -44,8 +44,9 @@ objects (`Gjs-CRITICAL ... has been already disposed`).
 The shell-side script writes to the FIFO and reads the mock's log (`EnableChargeThreshold(false)
 on BAT0`) to see which calls arrived. `return` is a no-op while the mock still owns the name.
 
-## Gotchas from the translations slice (#24)
+## Translations and parallel runs
 
 - **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
-- **A headless shell from another worktree's session holds the display lock.** If a run reports `0 of N tests passed` and the log says "Failed to create_socket", check `ps -eo pid,etime,args | awk '/[a]utomation-script/'`. A young process belongs to a live session: wait for it. Kill only an old one.
+- **A young headless shell is another session's live run** (the display-lock bullet above): wait for it, and kill only an old one. `ps -eo pid,etime,args | awk '/[a]utomation-script/'` shows the age.
+- **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
 - **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.

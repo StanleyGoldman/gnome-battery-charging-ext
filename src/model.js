@@ -153,8 +153,8 @@ export const BatteryChargingModel = GObject.registerClass({
 
     _reportFailure(preserve, failed, total) {
         // Naming the batteries only helps when some switched and some did not.
-        const named = total === 1 || failed.length === total ? [] : failed.map(d => d.nativePath);
-        this.emit('failed', this._strings.failedTitle(), this._strings.failedBody(preserve, named));
+        const names = total === 1 || failed.length === total ? [] : failed.map(d => d.nativePath);
+        this.emit('failed', this._strings.failedTitle(), this._strings.failedBody(preserve, names));
     }
 
     destroy() {

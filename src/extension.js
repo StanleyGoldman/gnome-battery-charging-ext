@@ -58,6 +58,7 @@ class BatteryChargingToggle extends QuickMenuToggle {
         this.checked = lit;
         this.subtitle = this._model.subtitle;
         this.accessible_name = this._model.accessibleName;
+        // The menu button gets the same name as the toggle: it opens that toggle's menu.
         if (SHELL_MAJOR >= 49)
             this.menuButtonAccessibleName = this._model.accessibleName;
         this.gicon = lit ? this.preserveIcon : this.maximizeIcon;

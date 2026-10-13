@@ -99,3 +99,4 @@ test('the partial failure body goes through ngettext with the failure count', ()
     made.failedBody(true, ['BAT0', 'BAT1', 'BAT2']);
     assertEqual(calls, [3]);
 });
+test("stripMnemonic handles full-width brackets and trailing space", () => assertEqual(stripMnemonic("最大（_M） "), "最大"));
