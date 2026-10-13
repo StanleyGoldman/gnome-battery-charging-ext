@@ -65,7 +65,7 @@ Source: #4, #5, #8.
 - Lit, and the menu ticks Preserve Battery Health, when **any** supporting battery has `ChargeThresholdEnabled == true`. There is no third "mixed" state.
 - React only to `ChargeThreshold*` property changes on each battery (`g-properties-changed`) and to UPower's `DeviceAdded` / `DeviceRemoved`. Ignore every other property change; percentage and rate updates arrive constantly.
 - While UPower is missing, the toggle is hidden. When UPower reappears, the extension enumerates the devices again.
-- Changes made elsewhere (GNOME Settings) show up at once, even with the menu open.
+- Changes made elsewhere (GNOME Settings) show up at once, even with the menu open, except while a switch is in flight (see §4 Switching): the display then keeps the latest click's target until its replies have all arrived.
 - Never write to UPower from a change handler. In particular, a battery that appears with a different setting is left as it is.
 
 **Switching.**
@@ -74,11 +74,11 @@ Source: #4, #5, #8.
 - Clicking the toggle switches away from what it shows: a lit toggle sets Maximize Charge on every battery.
 - A checklist item always applies its mode to every supporting battery, even when that item is already ticked. That's how the user retries after a partial failure or brings a newly arrived battery into line.
 - The switch is optimistic: the toggle shows the target mode at once, with no busy hint.
-- The last click wins. A reply from a superseded click never changes the display, so there is no flicker. The toggle re-syncs from UPower when the latest click's replies have all arrived.
+- The last click wins. A reply from a superseded click never changes the display, so there is no flicker. A refusal of a superseded click posts no notification. The toggle re-syncs from UPower when the latest click's replies have all arrived, and that re-sync is when a change made elsewhere during the switch appears.
 
 **Failures.**
 - **Refused or failed switch:** the toggle snaps back to what UPower reports and posts a notification. The menu shows no error.
-- **Notification text:** the title is "Could not change Battery Charging" and the body is "Switching to <mode> is not allowed." It never contains D-Bus error text, and it names no device when only one battery supports a limit.
+- **Notification text:** the title is "Could not change Battery Charging" and the body is "Switching to <mode> is not allowed." It never contains D-Bus error text, and it names no device when only one battery supports a limit, or when every supporting battery failed.
 - **Partial failure:** batteries that switched stay switched, with no rollback. The body names each battery that failed by its UPower native path, e.g. "Switching to Preserve Battery Health is not allowed for one battery (BAT1)."
 - **Battery gone mid-switch:** if a battery has disappeared by the time its reply arrives, its error is dropped. Errors from batteries that are still present are reported as usual.
 - **Inactive or remote sessions:** refusals there take the same snap-back and notification path. There is no logind tracking.
