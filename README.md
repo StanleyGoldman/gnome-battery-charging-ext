@@ -4,11 +4,11 @@ A GNOME Shell extension that switches **Battery Charging** between **Maximize Ch
 
 - **The toggle** is lit while Preserve Battery Health is on. Click it to switch modes, or open its menu to pick one.
 - **The setting** is UPower's, the same one GNOME Settings' Power page shows, so the two always agree. The extension stores nothing of its own and has no preferences.
-- **Every battery** that supports a charge limit is switched together. The toggle is hidden on machines without one.
+- **Every supporting battery** (a laptop battery whose firmware lets UPower limit its charge) is switched together. The toggle is hidden on machines without one.
 - **A refused switch** (for example from a remote or inactive session) snaps the toggle back and posts a notification.
 - **On GNOME 50**, a battery icon with a heart shows in the top bar while Preserve Battery Health is on.
 
-It needs UPower 1.90.6 or later and a laptop whose firmware supports a charge limit. `metadata.json` lists the GNOME Shell versions it has been checked on.
+It needs UPower 1.90.6 or later and a supporting battery. `src/metadata.json` lists the GNOME Shell versions it has been checked on.
 
 ## Installing
 
