@@ -28,6 +28,10 @@ export class FakeUPower {
         this.failEnumerate = false;
         this._heldEnumerations = [];
         this.setCalls = []; // [path, enabled]
+        // When true, setChargeThreshold() replies only on releaseSets().
+        this.holdSets = false;
+        this.failSets = new Set(); // paths whose switch is refused
+        this._heldSets = [];
         this._handlers = new Map();
         this._nextId = 1;
     }
@@ -49,7 +53,13 @@ export class FakeUPower {
 
     setChargeThreshold(path, enabled) {
         this.setCalls.push([path, enabled]);
-        return Promise.resolve();
+        const refuse = this.failSets.has(path);
+        const settle = (resolve, reject) => refuse
+            ? reject(new Error('GDBus.Error:org.freedesktop.DBus.Error.AccessDenied'))
+            : resolve();
+        if (!this.holdSets)
+            return new Promise(settle);
+        return new Promise((resolve, reject) => this._heldSets.push({path, run: () => settle(resolve, reject)}));
     }
 
     connect(signal, callback) {
@@ -77,6 +87,14 @@ export class FakeUPower {
 
     releaseEnumerate() {
         this._heldEnumerations.splice(0).forEach(reply => reply());
+    }
+
+    // Replies to held switches: all of them, or only those for `path`.
+    releaseSets(path = null) {
+        const [release, keep] = [[], []];
+        this._heldSets.forEach(h => (path === null || h.path === path ? release : keep).push(h));
+        this._heldSets = keep;
+        release.forEach(h => h.run());
     }
 
     add(device) {

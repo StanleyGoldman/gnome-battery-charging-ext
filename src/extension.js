@@ -108,6 +108,8 @@ export default class BatteryChargingExtension extends Extension {
             model.destroy();
             upower.destroy();
         });
+        const failedId = model.connect('failed', (_m, title, body) => Main.notify(title, body));
+        this._indicator.connect('destroy', () => model.disconnect(failedId));
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
     }
 

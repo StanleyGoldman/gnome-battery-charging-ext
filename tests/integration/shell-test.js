@@ -1,4 +1,4 @@
-// Integration tests 1, 2, 3, 5 and 6 (docs/spec.md §7), run inside a headless GNOME
+// Integration tests 1 to 6 (docs/spec.md §7), run inside a headless GNOME
 // Shell by tests/integration/run.sh. The mock UPower is driven through its FIFO
 // ($BATTERY_CHARGING_MOCK_FIFO) and logs to $BATTERY_CHARGING_MOCK_LOG.
 // Results are logged as "INTEGRATION PASS|FAIL <name>"; run.sh reads them.
@@ -117,9 +117,9 @@ const TESTS = [
         const toggle = findToggle();
         const before = mockLog().length;
         toggle.emit('clicked', 1);
+        await waitFor('EnableChargeThreshold(false)', () =>
+            mockLog().slice(before).includes('EnableChargeThreshold(false) on BAT0'));
         await waitFor('the toggle to follow', () => !toggle.checked);
-        assert(mockLog().slice(before).includes('EnableChargeThreshold(false) on BAT0'),
-            'the mock never got EnableChargeThreshold(false)');
         assertToggle(toggle, {visible: true, checked: false});
         assertTopBar(false);
 
@@ -137,6 +137,16 @@ const TESTS = [
         await waitFor('the toggle to follow', () => toggle.checked);
         assertToggle(toggle, {visible: true, checked: true});
         assertTopBar(true);
+    }],
+    ['4 a refused switch snaps back and notifies', async () => {
+        const toggle = findToggle();
+        mock('fail BAT0');
+        toggle.emit('clicked', 1);
+        await waitFor('the notification', () => Main.messageTray.getSources().some(src =>
+            src.notifications.some(n => n.title === 'Could not change Battery Charging' &&
+                n.body === 'Switching to Maximize Charge is not allowed.')));
+        assertToggle(toggle, {visible: true, checked: true});
+        mock('ok BAT0');
     }],
     ['5 UPower goes away and returns', async () => {
         const toggle = findToggle();
