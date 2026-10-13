@@ -27,6 +27,7 @@ export class FakeUPower {
         this.holdEnumerate = false;
         this.failEnumerate = false;
         this._heldEnumerations = [];
+        this.setCalls = []; // [path, enabled]
         this._handlers = new Map();
         this._nextId = 1;
     }
@@ -44,6 +45,11 @@ export class FakeUPower {
         if (!this.holdEnumerate)
             return Promise.resolve(result);
         return new Promise(resolve => this._heldEnumerations.push(() => resolve(result)));
+    }
+
+    setChargeThreshold(path, enabled) {
+        this.setCalls.push([path, enabled]);
+        return Promise.resolve();
     }
 
     connect(signal, callback) {

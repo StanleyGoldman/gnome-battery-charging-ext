@@ -4,6 +4,7 @@
 // It takes a UPower interface:
 //   running                    whether UPower is on the bus now
 //   enumerate()                Promise of {displayDeviceType, devices}
+//   setChargeThreshold(path, enabled)  Promise, settled when UPower replies
 //   connect(signal, callback)  returns an id for disconnect(id). Signals:
 //     'appeared', 'vanished'           UPower started or stopped
 //     'device-added' (device)
@@ -124,6 +125,15 @@ export const BatteryChargingModel = GObject.registerClass({
     get accessibleName() {
         return format(ACCESSIBLE_NAME, BATTERY_CHARGING,
             this.lit ? PRESERVE_BATTERY_HEALTH : MAXIMIZE_CHARGE);
+    }
+
+    // A plain switch on every supporting battery. Last-click-wins, the optimistic
+    // display and failure reporting arrive with #23.
+    switchTo(preserve) {
+        for (const device of this._supportingBatteries) {
+            this._upower.setChargeThreshold(device.path, preserve).catch(e =>
+                console.warn(`Battery Charging: switching ${device.nativePath} failed: ${e.message}`));
+        }
     }
 
     destroy() {
