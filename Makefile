@@ -7,7 +7,7 @@ EXTRA_SOURCES := $(filter-out src/extension.js,$(wildcard src/*.js))
 UNIT_TESTS := $(wildcard tests/unit/*.test.js)
 INSTALL_DIR := $(or $(XDG_DATA_HOME),$(HOME)/.local/share)/gnome-shell/extensions/$(UUID)
 
-.PHONY: test test-integration pack pot install uninstall check-deps
+.PHONY: test test-integration screenshots pack pot install uninstall check-deps
 
 ## Run the unit tests.
 test:
@@ -16,6 +16,10 @@ test:
 ## Pack the extension, then run the headless integration tests (GNOME Shell 50).
 test-integration: $(ZIP)
 	tests/integration/run.sh $(ZIP) dist/integration
+
+## Pack the extension, then retake the README screenshots in docs/screenshots (GNOME Shell 50).
+screenshots: $(ZIP)
+	scripts/screenshots.sh $(ZIP) docs/screenshots
 
 ## Build the installable zip in dist/.
 pack: $(ZIP)
