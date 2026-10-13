@@ -13,6 +13,12 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Parent split work**: when work splits into several issues (e.g. build slices), create one parent issue for the whole and attach every piece as a **sub-issue**: `gh api --method POST repos/<owner>/<repo>/issues/<parent>/sub_issues -F sub_issue_id=<child-db-id>` (the child's database id, as for blockers). Pieces that wait on each other also get blocker edges (above). Close the parent by hand once every sub-issue is closed.
 - **Batch `gh` scripts**: run multi-step scripts under bash explicitly, `bash -euo pipefail <<'EOF' ... EOF`. The login shell is zsh, whose 1-indexed arrays and different `set -e` once shifted titles onto the wrong issue bodies. After creating linked issues, read back each one's title, its parent (`gh api repos/<owner>/<repo>/issues/<parent>/sub_issues --jq '.[].number'`) and its blockers (`gh api repos/<owner>/<repo>/issues/<n>/dependencies/blocked_by`). Remove a wrong edge with `gh api --method DELETE repos/<owner>/<repo>/issues/<n>/dependencies/blocked_by/<blocker-db-id>`.
 - **Resolve with a PR**: the PR description carries a closing keyword for each issue it resolves, one per line (`Closes #<n>`). GitHub links the PR to each issue and closes it on merge.
+- **Follow-ups from a PR**: work a PR leaves for later issues goes in three places, each linking back to the PR:
+  - a `## Follow-ups` section in the PR description;
+  - a comment on each open issue it affects, opening `Follow-ups from <short PR name> (#<pr>):`, so the issue's implementer finds it without reading old PRs;
+  - a new issue for a follow-up no open issue holds. **Ask the user before creating it.** Its first line links the PR. Attach it to the parent as a sub-issue, and add a blocker edge to each issue that waits on it, as in **Parent split work**.
+
+  Finish with a PR comment listing where each follow-up went.
 - **Close by hand**: `gh issue close <number> --comment "..."`, for an issue resolved without a PR (e.g. by an answering comment).
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
