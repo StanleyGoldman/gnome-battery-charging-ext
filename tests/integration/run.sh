@@ -6,9 +6,9 @@
 set -euo pipefail
 
 # Headless shells share one Wayland display, so only one can run per user session.
-# Queue behind any other run; the kernel drops the lock when this process exits.
+# Queue behind any other run; the children don't inherit it, so the kernel drops it when this process exits.
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/battery-charging-integration.lock"
-flock 9
+flock -n 9 || { echo "Waiting for another integration run to finish..."; flock 9; }
 
 here=$(cd "$(dirname "$0")" && pwd)
 zip=$(realpath "$1")
@@ -30,7 +30,7 @@ timeout 180 dbus-run-session -- bash -c '
     BATTERY_CHARGING_MOCK_LOG="$out/mock.log" \
         gnome-shell-test-tool --headless --disable-animations --extension "$zip" \
         "$here/shell-test.js" > "$out/shell.log" 2>&1 || true
-' _ "$here" "$zip" "$out" 2>/dev/null || true
+' _ "$here" "$zip" "$out" 9>&- 2>/dev/null || true
 
 grep -E "INTEGRATION|Gjs-CRITICAL|JS ERROR|already disposed" "$out/shell.log" || true
 
