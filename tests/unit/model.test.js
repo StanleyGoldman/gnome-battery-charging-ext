@@ -379,3 +379,52 @@ test('the toggle re-syncs only when the latest click\'s replies have all arrived
     await settle();
     assertEqual(model.lit, false, 'synced from UPower');
 });
+
+test('UPower vanishing mid-switch drops the pending mode and the late errors', async () => {
+    const bat = battery();
+    const upower = new FakeUPower({devices: [bat]});
+    upower.holdSets = true;
+    upower.failSets.add(bat.path);
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(true);
+    upower.vanish();
+    upower.appear({devices: [bat]});
+    await settle();
+    upower.releaseSets();
+    await settle();
+    assertEqual([model.lit, failures], [false, []], 'lit, failures');
+});
+
+test('destroy mid-switch emits nothing afterwards', async () => {
+    const bat = battery();
+    const upower = new FakeUPower({devices: [bat]});
+    upower.holdSets = true;
+    upower.failSets.add(bat.path);
+    const model = await modelFor(upower);
+    const events = [];
+    model.connect('changed', () => events.push('changed'));
+    model.connect('failed', () => events.push('failed'));
+    model.switchTo(true);
+    events.length = 0;
+    model.destroy();
+    upower.releaseSets();
+    await settle();
+    assertEqual(events, [], 'events');
+});
+
+test('the message counts the batteries still present, not those at click time', async () => {
+    const [a, b] = [battery(), battery()];
+    const upower = new FakeUPower({devices: [a, b]});
+    upower.holdSets = true;
+    upower.failSets.add(b.path);
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(true);
+    upower.remove(a);
+    upower.releaseSets();
+    await settle();
+    assertEqual(failures, ['Switching to Preserve Battery Health is not allowed.'], 'body');
+});

@@ -48,6 +48,7 @@ export const BatteryChargingModel = GObject.registerClass({
         this._poweredByUps = false;
         this._generation = 0;
         this._removedWhileLoading = null;
+        this._destroyed = false;
         this._click = 0; // counts switches; only the latest one's outcome counts
         this._pending = null; // the mode (true: Preserve) the latest click asked for, until its replies are in
         this._upowerIds = [
@@ -91,6 +92,9 @@ export const BatteryChargingModel = GObject.registerClass({
 
     _onVanished() {
         this._generation++;
+        // Replies to a switch in flight no longer say anything about the batteries.
+        this._click++;
+        this._pending = null;
         this._devices.clear();
         this.emit('changed');
     }
@@ -156,8 +160,10 @@ export const BatteryChargingModel = GObject.registerClass({
             results[i].status === 'rejected' && this._devices.has(d.path));
         failed.forEach(d => console.warn(`Battery Charging: switching ${d.nativePath} failed`));
         this.emit('changed');
-        if (failed.length > 0)
-            this._reportFailure(preserve, failed, targets.length);
+        if (failed.length > 0) {
+            const present = targets.filter(d => this._devices.has(d.path)).length;
+            this._reportFailure(preserve, failed, present);
+        }
     }
 
     _reportFailure(preserve, failed, total) {
