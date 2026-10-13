@@ -22,3 +22,7 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 ### Subagents
 
 - Ask before starting research subagents, even when a skill (e.g. `wayfinder` charting) says to fire them automatically.
+
+### Pull requests
+
+- Never merge pull requests. Open them and leave merging to a human.
