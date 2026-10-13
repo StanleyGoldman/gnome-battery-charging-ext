@@ -1,28 +1,23 @@
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
+import Gettext from 'gettext';
 
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension, gettext as _, ngettext} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 import {PACKAGE_VERSION} from 'resource:///org/gnome/shell/misc/config.js';
 
 import {BatteryChargingModel} from './model.js';
+import {createStrings} from './strings.js';
 import {UPowerClient} from './upower.js';
 
 const SHELL_MAJOR = parseInt(PACKAGE_VERSION.split('.')[0]);
 
-// English for now; translation comes with #24.
-const TITLE = 'Battery';
-const MENU_HEADER = 'Battery Charging';
-const MAXIMIZE_CHARGE = 'Maximize Charge';
-const PRESERVE_BATTERY_HEALTH = 'Preserve Battery Health';
-const POWER_SETTINGS = 'Power Settings';
-
 const BatteryChargingToggle = GObject.registerClass(
 class BatteryChargingToggle extends QuickMenuToggle {
-    _init(extension, model) {
-        const params = {title: TITLE};
+    _init(extension, model, strings) {
+        const params = {title: strings.title};
         // 49+ only: an unknown construct property throws on 48.
         if (SHELL_MAJOR >= 49)
             params.menuButtonAccessibleName = model.accessibleName;
@@ -32,17 +27,17 @@ class BatteryChargingToggle extends QuickMenuToggle {
         this.preserveIcon = this._icon(extension, 'battery-preserve-health-symbolic.svg');
         this.maximizeIcon = this._icon(extension, 'battery-maximize-charge-symbolic.svg');
 
-        this.menu.setHeader(this.preserveIcon, MENU_HEADER);
+        this.menu.setHeader(this.preserveIcon, strings.batteryCharging);
         this._section = new PopupMenu.PopupMenuSection();
-        this.maximizeItem = new PopupMenu.PopupImageMenuItem(MAXIMIZE_CHARGE, this.maximizeIcon);
+        this.maximizeItem = new PopupMenu.PopupImageMenuItem(strings.maximizeCharge, this.maximizeIcon);
         this.maximizeItem.connect('activate', () => model.switchTo(false));
         this._section.addMenuItem(this.maximizeItem);
-        this.preserveItem = new PopupMenu.PopupImageMenuItem(PRESERVE_BATTERY_HEALTH, this.preserveIcon);
+        this.preserveItem = new PopupMenu.PopupImageMenuItem(strings.preserveBatteryHealth, this.preserveIcon);
         this.preserveItem.connect('activate', () => model.switchTo(true));
         this._section.addMenuItem(this.preserveItem);
         this.menu.addMenuItem(this._section);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addSettingsAction(POWER_SETTINGS, 'gnome-power-panel.desktop');
+        this.menu.addSettingsAction(strings.powerSettings, 'gnome-power-panel.desktop');
 
         // Clicking switches away from what the toggle shows.
         this.connect('clicked', () => model.switchTo(!model.lit));
@@ -73,9 +68,9 @@ class BatteryChargingToggle extends QuickMenuToggle {
 
 const BatteryChargingIndicator = GObject.registerClass(
 class BatteryChargingIndicator extends SystemIndicator {
-    _init(extension, model) {
+    _init(extension, model, strings) {
         super._init();
-        this._toggle = new BatteryChargingToggle(extension, model);
+        this._toggle = new BatteryChargingToggle(extension, model, strings);
         this.quickSettingsItems.push(this._toggle);
 
         // Like Power Mode, 50+ only: a top-bar icon while Preserve Battery Health is on.
@@ -95,9 +90,10 @@ class BatteryChargingIndicator extends SystemIndicator {
 export default class BatteryChargingExtension extends Extension {
     enable() {
         const upower = new UPowerClient();
-        const model = new BatteryChargingModel(upower);
+        const strings = createStrings({_, ngettext, dgettext: Gettext.dgettext});
+        const model = new BatteryChargingModel(upower, strings);
         try {
-            this._indicator = new BatteryChargingIndicator(this, model);
+            this._indicator = new BatteryChargingIndicator(this, model, strings);
         } catch (e) {
             model.destroy();
             upower.destroy();

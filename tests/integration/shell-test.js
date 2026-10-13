@@ -1,5 +1,6 @@
-// Integration tests 1 to 6 (docs/spec.md §7), run inside a headless GNOME
-// Shell by tests/integration/run.sh. The mock UPower is driven through its FIFO
+// Integration tests 1 to 7 (docs/spec.md §7), run inside a headless GNOME
+// Shell by tests/integration/run.sh. Tests 1 to 6 run in an English shell, test 7 in a
+// German one ($BATTERY_CHARGING_TEST_PASS says which). The mock UPower is driven through its FIFO
 // ($BATTERY_CHARGING_MOCK_FIFO) and logs to $BATTERY_CHARGING_MOCK_LOG.
 // Results are logged as "INTEGRATION PASS|FAIL <name>"; run.sh reads them.
 //
@@ -18,6 +19,7 @@ import {PACKAGE_VERSION} from 'resource:///org/gnome/shell/misc/config.js';
 const UUID = 'battery-charging@stanleygoldman.github.io';
 const OUT = GLib.getenv('BATTERY_CHARGING_TEST_OUT') ?? '/tmp';
 const FIFO = GLib.getenv('BATTERY_CHARGING_MOCK_FIFO');
+const PASS = GLib.getenv('BATTERY_CHARGING_TEST_PASS') ?? 'english';
 const MOCK_LOG = GLib.getenv('BATTERY_CHARGING_MOCK_LOG');
 
 export const METRICS = {};
@@ -52,6 +54,12 @@ function topBarIcon() {
     const indicator = Main.panel.statusArea.quickSettings._indicators.get_children()
         .find(c => c.constructor.name === 'BatteryChargingIndicator');
     return indicator?.get_children()[0] ?? null;
+}
+
+// The text of every label under an actor.
+function menuTexts(actor) {
+    const own = typeof actor.text === 'string' && actor.text !== '' ? [actor.text] : [];
+    return own.concat(actor.get_children().flatMap(menuTexts));
 }
 
 function iconName(gicon) {
@@ -106,7 +114,7 @@ function resetMock() {
     mock('add BAT0 enabled');
 }
 
-const TESTS = [
+const ENGLISH_TESTS = [
     ['1 appears and shows state', async () => {
         await waitFor('the toggle', () => findToggle()?.visible);
         const toggle = findToggle();
@@ -179,6 +187,18 @@ const TESTS = [
         await waitFor('the toggle to return', () => findToggle()?.visible);
     }],
 ];
+
+// Needs the German GNOME language pack (make check-deps).
+const GERMAN_TESTS = [
+    ['7 translations', async () => {
+        await waitFor('the toggle', () => findToggle()?.visible);
+        // setHeader() has no getter, so read the labels the menu shows.
+        const texts = menuTexts(findToggle().menu.actor);
+        assert(texts.includes('Batterieladung'), `menu header is not "Batterieladung": ${JSON.stringify(texts)}`);
+    }],
+];
+
+const TESTS = PASS === 'german' ? GERMAN_TESTS : ENGLISH_TESTS;
 
 async function runTests() {
     Main.panel.statusArea.quickSettings.menu.close();

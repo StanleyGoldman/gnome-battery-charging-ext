@@ -10,6 +10,7 @@
 //     'device-added' (device)
 //     'device-removed' (path)
 //     'device-changed' (path, propertyNames)  D-Bus names, e.g. 'ChargeThresholdEnabled'
+// and the strings from createStrings() in strings.js (docs/spec.md §5).
 // A device is {path, nativePath, type, powerSupply, chargeThresholdSupported,
 // chargeThresholdEnabled}, its properties kept current by the interface.
 
@@ -18,22 +19,6 @@ import GObject from 'gi://GObject';
 const DEVICE_TYPE_BATTERY = 2;
 const DEVICE_TYPE_UPS = 3;
 
-// English for now; translation comes with #24.
-const BATTERY_CHARGING = 'Battery Charging';
-const MAXIMIZE_CHARGE = 'Maximize Charge';
-const PRESERVE_BATTERY_HEALTH = 'Preserve Battery Health';
-const SHORT_MAXIMIZE = 'Maximize';
-const SHORT_PRESERVE = 'Preserve';
-const ACCESSIBLE_NAME = '%s: %s';
-const FAILED_TITLE = 'Could not change %s';
-const FAILED_BODY = 'Switching to %s is not allowed.';
-const FAILED_BODY_ONE = 'Switching to %s is not allowed for one battery (%s).';
-const FAILED_BODY_SOME = 'Switching to %s is not allowed for %s batteries (%s).';
-
-function format(template, ...args) {
-    return template.replace(/%s/g, () => args.shift());
-}
-
 export const BatteryChargingModel = GObject.registerClass({
     Signals: {
         'changed': {},
@@ -41,9 +26,10 @@ export const BatteryChargingModel = GObject.registerClass({
         'failed': {param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING]},
     },
 }, class BatteryChargingModel extends GObject.Object {
-    constructor(upower) {
+    constructor(upower, strings) {
         super();
         this._upower = upower;
+        this._strings = strings;
         this._devices = new Map(); // object path -> device
         this._poweredByUps = false;
         this._generation = 0;
@@ -135,12 +121,11 @@ export const BatteryChargingModel = GObject.registerClass({
     }
 
     get subtitle() {
-        return this.lit ? SHORT_PRESERVE : SHORT_MAXIMIZE;
+        return this._strings.shortModeName(this.lit);
     }
 
     get accessibleName() {
-        return format(ACCESSIBLE_NAME, BATTERY_CHARGING,
-            this.lit ? PRESERVE_BATTERY_HEALTH : MAXIMIZE_CHARGE);
+        return this._strings.accessibleName(this.lit);
     }
 
     // Optimistic: shows the target mode until every reply to the latest click is in,
@@ -167,16 +152,9 @@ export const BatteryChargingModel = GObject.registerClass({
     }
 
     _reportFailure(preserve, failed, total) {
-        const mode = preserve ? PRESERVE_BATTERY_HEALTH : MAXIMIZE_CHARGE;
-        let body;
-        if (total === 1 || failed.length === total)
-            body = format(FAILED_BODY, mode);
-        else if (failed.length === 1)
-            body = format(FAILED_BODY_ONE, mode, failed[0].nativePath);
-        else
-            body = format(FAILED_BODY_SOME, mode, String(failed.length),
-                failed.map(d => d.nativePath).join(', '));
-        this.emit('failed', format(FAILED_TITLE, BATTERY_CHARGING), body);
+        // Naming the batteries only helps when some switched and some did not.
+        const named = total === 1 || failed.length === total ? [] : failed.map(d => d.nativePath);
+        this.emit('failed', this._strings.failedTitle(), this._strings.failedBody(preserve, named));
     }
 
     destroy() {

@@ -1,0 +1,64 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the battery-charging@stanleygoldman.github.io package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: battery-charging@stanleygoldman.github.io\n"
+"Report-Msgid-Bugs-To: https://github.com/StanleyGoldman/gnome-battery-"
+"charging-ext/issues\n"
+"POT-Creation-Date: 2026-10-13 13:57-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#. Translators: toggle title, at most about 10 characters; "Battery Charging" is the full name.
+#: src/strings.js:41
+msgid "Battery"
+msgstr ""
+
+#. Translators: toggle subtitle for the mode that lets the battery charge to full; at most about 10 characters.
+#: src/strings.js:43
+msgid "Maximize"
+msgstr ""
+
+#. Translators: toggle subtitle for the mode that holds the battery below full to slow its wear; at most about 10 characters.
+#: src/strings.js:45
+msgid "Preserve"
+msgstr ""
+
+#. Translators: the toggle's accessible name. The first %s is the setting's name
+#. ("Battery Charging"), the second its current mode ("Maximize Charge").
+#: src/strings.js:62
+#, javascript-format
+msgid "%s: %s"
+msgstr ""
+
+#. Translators: notification title. %s is the setting's name ("Battery Charging").
+#: src/strings.js:65
+#, javascript-format
+msgid "Could not change %s"
+msgstr ""
+
+#. Translators: notification body. %s is the mode that was refused ("Maximize Charge").
+#: src/strings.js:72
+#, javascript-format
+msgid "Switching to %s is not allowed."
+msgstr ""
+
+#. Translators: notification body when only some batteries refused. %1$s is the
+#. mode ("Maximize Charge"), %2$d how many batteries refused, %3$s their names
+#. (BAT1, or "BAT0, BAT1"). Singular and plural forms; %2$d may be left out of the singular.
+#: src/strings.js:78
+#, javascript-format
+msgid "Switching to %1$s is not allowed for one battery (%3$s)."
+msgid_plural "Switching to %1$s is not allowed for %2$d batteries (%3$s)."
+msgstr[0] ""
+msgstr[1] ""

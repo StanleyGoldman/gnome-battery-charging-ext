@@ -2,9 +2,17 @@ import {test, assertEqual} from './harness.js';
 import {DeviceType, FakeUPower, battery, settle} from './fakeUPower.js';
 
 import {BatteryChargingModel} from '../../src/model.js';
+import {createStrings} from '../../src/strings.js';
+
+// English: every lookup returns its msgid.
+const english = createStrings({
+    _: s => s,
+    ngettext: (one, many, n) => n === 1 ? one : many,
+    dgettext: (_domain, msgid) => msgid,
+});
 
 async function modelFor(upower) {
-    const model = new BatteryChargingModel(upower);
+    const model = new BatteryChargingModel(upower, english);
     await settle();
     return model;
 }
@@ -427,4 +435,20 @@ test('the message counts the batteries still present, not those at click time', 
     upower.releaseSets();
     await settle();
     assertEqual(failures, ['Switching to Preserve Battery Health is not allowed.'], 'body');
+});
+
+test('the toggle text comes from the injected translations', async () => {
+    const german = createStrings({
+        _: s => ({'Maximize': 'Maximal', '%s: %s': '%s: %s', 'Preserve': 'Erhalten'})[s] ?? s,
+        ngettext: (one, many, n) => n === 1 ? one : many,
+        dgettext: (_domain, msgid) => ({
+            'Battery Charging': 'Batterieladung',
+            '_Maximize Charge': '_Maximal laden',
+        })[msgid] ?? msgid,
+    });
+    const model = new BatteryChargingModel(
+        new FakeUPower({devices: [battery({chargeThresholdEnabled: false})]}), german);
+    await settle();
+    assertEqual(model.subtitle, 'Maximal', 'subtitle');
+    assertEqual(model.accessibleName, 'Batterieladung: Maximal laden', 'accessible name');
 });
