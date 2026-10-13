@@ -2,18 +2,22 @@
 # PROTOTYPE for issue #11: screenshot each #5 text variant headlessly, then
 # crop the Quick Settings panel from each into one side-by-side image.
 #   ./variants.sh [OUT_DIR]      (default: ./smoke-out/variants)
+#   ONLY=D-short-labels ./variants.sh    reruns one variant; the comparison
+#                                        uses each variant's latest run
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 out=$(realpath -m "${1:-$here/smoke-out/variants}")
 
-run() {  # name title colspan
+run() {  # name title colspan short-subtitles
+    [[ -n ${ONLY:-} && $ONLY != "$1" ]] && return
     echo "== $1"
-    BATTERY_CHARGING_PROTO_TITLE=$2 BATTERY_CHARGING_PROTO_COLSPAN=$3 \
+    BATTERY_CHARGING_PROTO_TITLE=$2 BATTERY_CHARGING_PROTO_COLSPAN=$3 BATTERY_CHARGING_PROTO_SHORT=${4:-0} \
         "$here/smoke-test.sh" "$out/$1" | grep -E 'SMOKE (start|after|FAILED)' | sed 's/.*SMOKE/  /'
 }
 run A-two-columns 'Battery Charging' 2
 run B-short-title 'Charging' 1
 run C-truncate 'Battery Charging' 1
+run D-short-labels 'Battery' 1 1
 
 python3 - "$out" <<'PY'
 import sys
@@ -21,7 +25,7 @@ import gi
 gi.require_version('GdkPixbuf', '2.0')
 from gi.repository import GdkPixbuf
 out = sys.argv[1]
-variants = ['A-two-columns', 'B-short-title', 'C-truncate']
+variants = ['A-two-columns', 'B-short-title', 'C-truncate', 'D-short-labels']
 shots = ['1-maximize-charge', '2-preserve-battery-health']
 x, y, w, h = 872, 0, 408, 340          # the Quick Settings panel at 1280x720
 gap, label_h = 12, 0

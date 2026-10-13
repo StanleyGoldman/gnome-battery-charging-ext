@@ -20,6 +20,7 @@ const USE_SESSION_BUS = GLib.getenv('BATTERY_CHARGING_PROTO_BUS') === 'session';
 // Variant knobs for #5's text question (see ../variants.sh).
 const TITLE = GLib.getenv('BATTERY_CHARGING_PROTO_TITLE') || 'Battery Charging';
 const COL_SPAN = parseInt(GLib.getenv('BATTERY_CHARGING_PROTO_COLSPAN') || '1');
+const SHORT_SUBTITLES = GLib.getenv('BATTERY_CHARGING_PROTO_SHORT') === '1';
 
 const UPOWER_NAME = 'org.freedesktop.UPower';
 const UPOWER_PATH = '/org/freedesktop/UPower';
@@ -199,7 +200,10 @@ class BatteryChargingToggle extends QuickMenuToggle {
 
         this.visible = supporting.length > 0;
         this.checked = preserve;
-        this.subtitle = preserve ? PRESERVE_BATTERY_HEALTH : MAXIMIZE_CHARGE;
+        if (SHORT_SUBTITLES)
+            this.subtitle = preserve ? 'Preserve' : 'Maximize';
+        else
+            this.subtitle = preserve ? PRESERVE_BATTERY_HEALTH : MAXIMIZE_CHARGE;
         this.gicon = preserve ? this._healthIcon : this._chargeIcon;
         this._healthItem.setOrnament(preserve ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
         this._chargeItem.setOrnament(preserve ? PopupMenu.Ornament.NONE : PopupMenu.Ornament.CHECK);
