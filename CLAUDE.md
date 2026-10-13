@@ -1,8 +1,16 @@
 ## Agent skills
 
-- **Issues:** before creating, reading, labelling or closing an issue, read `docs/agents/issue-tracker.md`.
-- **Triage labels:** before applying a triage label, read `docs/agents/triage-labels.md`.
-- **Domain docs:** before exploring the code or naming a domain concept, read `docs/agents/domain.md`.
+### Issue tracker
+
+Issues live in GitHub Issues on StanleyGoldman/gnome-battery-charging-ext (via the `gh` CLI). See `docs/agents/issue-tracker.md` before creating, reading, labelling or closing an issue.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md` before applying a triage label.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md` before exploring the code or naming a domain concept.
 
 ## Working preferences
 
