@@ -136,6 +136,7 @@ Three layers. See `docs/agents/gnome-shell-testing.md` before running a headless
 1. **Unit tests, written test-first (TDD).**
    - They cover the core under `gjs -m`, using a small homemade runner (no GJS test framework is packaged).
    - A fake UPower interface resolves or rejects replies by hand, in any order.
+   - `UPowerClient` takes a `newProxy` factory, so `upower.test.js` resolves D-Bus proxies by hand and covers its races: a device removed, or UPower restarted, while a proxy loads, and destroy mid-load.
    - This layer is the only one that covers several batteries, the mixed state, last-click-wins, partial failure, vanished batteries, mnemonic stripping and the composed messages.
 2. **Headless integration tests** with `gnome-shell-test-tool --headless --extension` (50), against a session-bus UPower mock.
    - They assert on the toggle's actual properties. Screenshots are saved on failure only.

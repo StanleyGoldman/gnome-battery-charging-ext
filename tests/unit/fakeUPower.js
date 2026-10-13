@@ -127,9 +127,4 @@ export class FakeUPower {
     }
 }
 
-// Lets pending promise callbacks run.
-export async function settle() {
-    for (let i = 0; i < 10; i++)
-        // eslint-disable-next-line no-await-in-loop
-        await Promise.resolve();
-}
+export {settle} from './harness.js';

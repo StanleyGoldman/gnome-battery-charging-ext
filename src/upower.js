@@ -56,10 +56,11 @@ function dbusProxyFactory(bus) {
 }
 
 export class UPowerClient {
-    constructor({newProxy} = {}) {
+    constructor({newProxy, warn = msg => console.warn(msg)} = {}) {
         const bus = GLib.getenv('BATTERY_CHARGING_UPOWER_BUS') === 'session'
             ? Gio.DBus.session : Gio.DBus.system;
         this._newProxy = newProxy ?? dbusProxyFactory(bus);
+        this._warn = warn;
         this._cancellable = new Gio.Cancellable();
         this._handlers = new Map(); // id -> {signal, callback}
         this._nextId = 1;
@@ -82,7 +83,7 @@ export class UPowerClient {
                 this._emit('appeared');
         }, error => {
             if (!this._cancellable.is_cancelled())
-                console.warn(`Battery Charging: UPower proxy failed: ${error.message}`);
+                this._warn(`Battery Charging: UPower proxy failed: ${error.message}`);
         });
     }
 
@@ -105,7 +106,7 @@ export class UPowerClient {
                 if (entry)
                     devices.push(entry.device);
             } catch (e) {
-                console.warn(`Battery Charging: could not read ${path}: ${e.message}`);
+                this._warn(`Battery Charging: could not read ${path}: ${e.message}`);
             }
         }
         return {displayDeviceType, devices};
@@ -194,7 +195,7 @@ export class UPowerClient {
             if (entry)
                 this._emit('device-added', entry.device);
         } catch (e) {
-            console.warn(`Battery Charging: could not read ${path}: ${e.message}`);
+            this._warn(`Battery Charging: could not read ${path}: ${e.message}`);
         }
     }
 

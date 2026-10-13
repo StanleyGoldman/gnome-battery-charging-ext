@@ -1,5 +1,5 @@
 import {test, assertEqual} from './harness.js';
-import {settle} from './fakeUPower.js';
+import {settle} from './harness.js';
 
 import {UPowerClient} from '../../src/upower.js';
 
@@ -55,6 +55,8 @@ class FakeProxy {
 // A proxy factory whose requests resolve only when the test says so.
 class FakeBus {
     constructor() {
+        this.warnings = [];
+        this.warn = msg => this.warnings.push(msg);
         this.pending = []; // {kind, path, resolve, reject}
         this.upower = new FakeProxy({
             g_name_owner: ':1.1',
@@ -66,6 +68,8 @@ class FakeBus {
 
     take(kind, path) {
         const i = this.pending.findIndex(r => r.kind === kind && r.path === path);
+        if (i === -1)
+            throw new Error(`no pending ${kind} proxy for ${path}`);
         return this.pending.splice(i, 1)[0];
     }
 
@@ -82,7 +86,7 @@ function devProxy(props = {}) {
 }
 
 async function readyClient(bus) {
-    const client = new UPowerClient({newProxy: bus.newProxy});
+    const client = new UPowerClient({newProxy: bus.newProxy, warn: bus.warn});
     bus.resolve('upower', '/org/freedesktop/UPower', bus.upower);
     await settle();
     return client;
@@ -130,10 +134,13 @@ test('a device removed and re-added while loading is reported once, from the new
     bus.upower.fire('DeviceAdded', [PATH]);
     bus.upower.fire('DeviceRemoved', [PATH]);
     bus.upower.fire('DeviceAdded', [PATH]);
-    bus.resolve('device', PATH, devProxy());
-    bus.resolve('device', PATH, devProxy({NativePath: 'BAT1'}));
+    const stale = devProxy();
+    const fresh = devProxy({NativePath: 'BAT1'});
+    bus.resolve('device', PATH, stale);
+    bus.resolve('device', PATH, fresh);
     await settle();
     assertEqual(log, [['device-added', PATH]], 'signals');
+    assertEqual([stale.listeners, fresh.listeners], [0, 1], 'listeners');
 });
 
 test('a device added twice while loading keeps one proxy', async () => {
@@ -201,7 +208,7 @@ test('a device whose proxy fails to load is skipped without breaking enumerate',
     assertEqual((await listing).devices, [], 'devices');
 });
 
-test('destroy while a device proxy loads reports nothing', async () => {
+test('destroy while a device proxy loads reports nothing and logs nothing', async () => {
     const bus = new FakeBus();
     const client = await readyClient(bus);
     const log = record(client, 'device-added');
@@ -212,6 +219,43 @@ test('destroy while a device proxy loads reports nothing', async () => {
     await settle();
     assertEqual(log, [], 'signals');
     assertEqual(proxy.listeners, 0, 'listeners');
+    assertEqual(bus.warnings, [], 'warnings');
+});
+
+test('destroy before the UPower proxy loads leaves nothing attached', async () => {
+    const bus = new FakeBus();
+    const client = new UPowerClient({newProxy: bus.newProxy});
+    const log = record(client, 'appeared');
+    client.destroy();
+    bus.resolve('upower', '/org/freedesktop/UPower', bus.upower);
+    await settle();
+    assertEqual(log, [], 'signals');
+    assertEqual(bus.upower.listeners, 0, 'listeners');
+    assertEqual(client.running, false, 'running');
+});
+
+test('a UPower proxy that fails to load logs and leaves the client not running', async () => {
+    const bus = new FakeBus();
+    const client = new UPowerClient({newProxy: bus.newProxy, warn: bus.warn});
+    bus.take('upower', '/org/freedesktop/UPower').reject(new Error('no bus'));
+    await settle();
+    assertEqual(bus.warnings.length, 1, 'warnings');
+    assertEqual(client.running, false, 'running');
+});
+
+test('a UPower restart drops the devices already loaded', async () => {
+    const bus = new FakeBus();
+    const client = await readyClient(bus);
+    bus.upower.fire('DeviceAdded', [PATH]);
+    const proxy = devProxy();
+    bus.resolve('device', PATH, proxy);
+    await settle();
+    bus.upower.g_name_owner = null;
+    bus.upower.fire('notify::g-name-owner');
+    assertEqual(proxy.listeners, 0, 'listeners');
+    await client.setChargeThreshold(PATH, true).then(
+        () => { throw new Error('expected a rejection'); },
+        e => assertEqual(e.message, `${PATH} is gone`, 'switch error'));
 });
 
 test('a changed device reports the changed property names', async () => {

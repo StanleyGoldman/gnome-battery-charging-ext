@@ -18,3 +18,10 @@ export function assertEqual(actual, expected, what = 'value') {
     if (serialize(actual) !== serialize(expected))
         throw new Error(`${what}: expected ${serialize(expected)}, got ${serialize(actual)}`);
 }
+
+// Lets pending promise continuations run.
+export async function settle() {
+    for (let i = 0; i < 10; i++)
+        // eslint-disable-next-line no-await-in-loop
+        await Promise.resolve();
+}
