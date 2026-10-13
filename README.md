@@ -32,6 +32,7 @@ gnome-extensions enable battery-charging@stanleygoldman.github.io
 | `make test-integration` | Packs the extension, then runs the headless GNOME Shell tests against a mock UPower. |
 | `make pack` | Builds the installable zip in `dist/`. |
 | `make install` | Packs the zip and installs it for the current user. |
+| `make uninstall` | Uninstalls it for the current user. |
 | `make pot` | Regenerates the translation template, `po/battery-charging@stanleygoldman.github.io.pot`. |
 | `make check-deps` | Lists missing tools and the `apt` line that installs them. It never runs `sudo`. |
 

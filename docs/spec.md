@@ -180,6 +180,7 @@ Source: #15.
 | `make pot` | Regenerates `po/<uuid>.pot` from `_()` strings only. `xgettext`'s JavaScript mode extracts `dgettext` calls by default, so reset the keywords: `xgettext -k --keyword=_ --keyword=C_:1c,2 --keyword=ngettext:1,2`. The `.pot` is committed. |
 | `make pack` | `gnome-extensions pack` with `--podir=po`, the icons and any extra sources. |
 | `make install` | Installs the packed zip for the current user. |
+| `make uninstall` | Uninstalls the extension for the current user. |
 | `make check-deps` | Lists missing tools (`gjs`, `xgettext` from `gettext`, `python3-gi`, the German GNOME language pack) and the `apt` line that installs them. It never runs `sudo` itself. |
 
 **README.** It covers what the extension does, installing it, the `make` targets, where translators put a `.po` file, and the icon attribution.

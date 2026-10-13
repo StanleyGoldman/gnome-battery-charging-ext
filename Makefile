@@ -5,8 +5,9 @@ POT := po/$(UUID).pot
 SOURCES := $(wildcard src/*.js src/metadata.json) $(ICONS)
 EXTRA_SOURCES := $(filter-out src/extension.js,$(wildcard src/*.js))
 UNIT_TESTS := $(wildcard tests/unit/*.test.js)
+INSTALL_DIR := $(or $(XDG_DATA_HOME),$(HOME)/.local/share)/gnome-shell/extensions/$(UUID)
 
-.PHONY: test test-integration pack pot install check-deps
+.PHONY: test test-integration pack pot install uninstall check-deps
 
 ## Run the unit tests.
 test:
@@ -36,6 +37,12 @@ pot:
 ## Install the zip for the current user.
 install: $(ZIP)
 	gnome-extensions install --force $(ZIP)
+
+## Uninstall the extension for the current user. gnome-extensions asks the running shell,
+## which doesn't know an extension installed since the last login (Wayland can't reload),
+## so fall back to deleting its directory.
+uninstall:
+	gnome-extensions uninstall $(UUID) 2>/dev/null || rm -rf "$(INSTALL_DIR)"
 
 ## List missing tools and the apt line that installs them. Never runs sudo.
 check-deps:
