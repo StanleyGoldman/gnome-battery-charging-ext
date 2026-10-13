@@ -242,3 +242,189 @@ test('switchTo applies the mode to every supporting battery and skips the rest',
     model.switchTo(true);
     assertEqual(upower.setCalls, [[first.path, true], [second.path, true]], 'calls');
 });
+
+test('a switch shows the target mode at once, then follows UPower', async () => {
+    const bat = battery();
+    const upower = new FakeUPower({devices: [bat]});
+    upower.holdSets = true;
+    const model = await modelFor(upower);
+    let changes = 0;
+    model.connect('changed', () => changes++);
+    model.switchTo(true);
+    assertEqual([model.lit, model.subtitle, changes], [true, 'Preserve', 1], 'optimistic');
+    upower.change(bat, {chargeThresholdEnabled: true});
+    upower.releaseSets();
+    await settle();
+    assertEqual(model.lit, true, 'lit after reply');
+    upower.change(bat, {chargeThresholdEnabled: false});
+    assertEqual(model.lit, false, 'follows UPower again');
+});
+
+test('a refused switch snaps back and fails with the finished message', async () => {
+    const bat = battery();
+    const upower = new FakeUPower({devices: [bat]});
+    upower.failSets.add(bat.path);
+    upower.holdSets = true;
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, title, body) => failures.push([title, body]));
+    model.switchTo(true);
+    assertEqual(model.lit, true, 'optimistic');
+    upower.releaseSets();
+    await settle();
+    assertEqual(model.lit, false, 'snapped back');
+    assertEqual(failures, [['Could not change Battery Charging',
+        'Switching to Preserve Battery Health is not allowed.']], 'failures');
+});
+
+test('the message for Maximize Charge names that mode', async () => {
+    const bat = battery({chargeThresholdEnabled: true});
+    const upower = new FakeUPower({devices: [bat]});
+    upower.failSets.add(bat.path);
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(false);
+    await settle();
+    assertEqual(failures, ['Switching to Maximize Charge is not allowed.'], 'body');
+    assertEqual(model.lit, true, 'snapped back');
+});
+
+test('a partial failure names the batteries that failed and keeps the others switched', async () => {
+    const [a, b] = [battery(), battery()];
+    const upower = new FakeUPower({devices: [a, b]});
+    upower.failSets.add(b.path);
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(true);
+    upower.change(a, {chargeThresholdEnabled: true});
+    await settle();
+    assertEqual(failures, [`Switching to Preserve Battery Health is not allowed for one battery (${b.nativePath}).`], 'body');
+    assertEqual(model.lit, true, 'a stays switched');
+});
+
+test('several failures are counted and named', async () => {
+    const bats = [battery(), battery(), battery()];
+    const upower = new FakeUPower({devices: bats});
+    upower.failSets.add(bats[1].path);
+    upower.failSets.add(bats[2].path);
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(true);
+    await settle();
+    assertEqual(failures, [`Switching to Preserve Battery Health is not allowed for 2 batteries (${bats[1].nativePath}, ${bats[2].nativePath}).`], 'body');
+});
+
+test('when every battery refuses, the message names no device', async () => {
+    const bats = [battery(), battery()];
+    const upower = new FakeUPower({devices: bats});
+    bats.forEach(b => upower.failSets.add(b.path));
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(true);
+    await settle();
+    assertEqual(failures, ['Switching to Preserve Battery Health is not allowed.'], 'body');
+});
+
+test('an error from a battery that vanished mid-switch is dropped', async () => {
+    const [a, b] = [battery(), battery()];
+    const upower = new FakeUPower({devices: [a, b]});
+    upower.failSets.add(b.path);
+    upower.holdSets = true;
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(true);
+    upower.remove(b);
+    upower.releaseSets();
+    await settle();
+    assertEqual(failures, [], 'no failure');
+});
+
+test('the last click wins: a superseded click never changes the display or notifies', async () => {
+    const bat = battery();
+    const upower = new FakeUPower({devices: [bat]});
+    upower.holdSets = true;
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    upower.failSets.add(bat.path);
+    model.switchTo(true);
+    upower.failSets.clear();
+    model.switchTo(false);
+    assertEqual(model.lit, false, 'shows the latest click');
+    // Replies arrive in order: the first (refused) one is superseded.
+    upower._heldSets[0].run();
+    await settle();
+    assertEqual([model.lit, failures], [false, []], 'superseded reply ignored');
+    upower.releaseSets();
+    await settle();
+    assertEqual([model.lit, failures], [false, []], 'after latest reply');
+});
+
+test('the toggle re-syncs only when the latest click\'s replies have all arrived', async () => {
+    const [a, b] = [battery(), battery()];
+    const upower = new FakeUPower({devices: [a, b]});
+    upower.holdSets = true;
+    const model = await modelFor(upower);
+    model.switchTo(true);
+    upower.change(a, {chargeThresholdEnabled: false});
+    upower.releaseSets(a.path);
+    await settle();
+    assertEqual(model.lit, true, 'still optimistic with one reply outstanding');
+    upower.releaseSets(b.path);
+    await settle();
+    assertEqual(model.lit, false, 'synced from UPower');
+});
+
+test('UPower vanishing mid-switch drops the pending mode and the late errors', async () => {
+    const bat = battery();
+    const upower = new FakeUPower({devices: [bat]});
+    upower.holdSets = true;
+    upower.failSets.add(bat.path);
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(true);
+    upower.vanish();
+    upower.appear({devices: [bat]});
+    await settle();
+    upower.releaseSets();
+    await settle();
+    assertEqual([model.lit, failures], [false, []], 'lit, failures');
+});
+
+test('destroy mid-switch emits nothing afterwards', async () => {
+    const bat = battery();
+    const upower = new FakeUPower({devices: [bat]});
+    upower.holdSets = true;
+    upower.failSets.add(bat.path);
+    const model = await modelFor(upower);
+    const events = [];
+    model.connect('changed', () => events.push('changed'));
+    model.connect('failed', () => events.push('failed'));
+    model.switchTo(true);
+    events.length = 0;
+    model.destroy();
+    upower.releaseSets();
+    await settle();
+    assertEqual(events, [], 'events');
+});
+
+test('the message counts the batteries still present, not those at click time', async () => {
+    const [a, b] = [battery(), battery()];
+    const upower = new FakeUPower({devices: [a, b]});
+    upower.holdSets = true;
+    upower.failSets.add(b.path);
+    const model = await modelFor(upower);
+    const failures = [];
+    model.connect('failed', (_m, _t, body) => failures.push(body));
+    model.switchTo(true);
+    upower.remove(a);
+    upower.releaseSets();
+    await settle();
+    assertEqual(failures, ['Switching to Preserve Battery Health is not allowed.'], 'body');
+});

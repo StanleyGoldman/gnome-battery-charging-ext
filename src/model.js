@@ -25,13 +25,21 @@ const PRESERVE_BATTERY_HEALTH = 'Preserve Battery Health';
 const SHORT_MAXIMIZE = 'Maximize';
 const SHORT_PRESERVE = 'Preserve';
 const ACCESSIBLE_NAME = '%s: %s';
+const FAILED_TITLE = 'Could not change %s';
+const FAILED_BODY = 'Switching to %s is not allowed.';
+const FAILED_BODY_ONE = 'Switching to %s is not allowed for one battery (%s).';
+const FAILED_BODY_SOME = 'Switching to %s is not allowed for %s batteries (%s).';
 
 function format(template, ...args) {
     return template.replace(/%s/g, () => args.shift());
 }
 
 export const BatteryChargingModel = GObject.registerClass({
-    Signals: {'changed': {}},
+    Signals: {
+        'changed': {},
+        // The finished notification title and body.
+        'failed': {param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING]},
+    },
 }, class BatteryChargingModel extends GObject.Object {
     constructor(upower) {
         super();
@@ -40,6 +48,9 @@ export const BatteryChargingModel = GObject.registerClass({
         this._poweredByUps = false;
         this._generation = 0;
         this._removedWhileLoading = null;
+        this._destroyed = false;
+        this._click = 0; // counts switches; only the latest one's outcome counts
+        this._pending = null; // the mode (true: Preserve) the latest click asked for, until its replies are in
         this._upowerIds = [
             upower.connect('appeared', () => this._load()),
             upower.connect('vanished', () => this._onVanished()),
@@ -81,6 +92,9 @@ export const BatteryChargingModel = GObject.registerClass({
 
     _onVanished() {
         this._generation++;
+        // Replies to a switch in flight no longer say anything about the batteries.
+        this._click++;
+        this._pending = null;
         this._devices.clear();
         this.emit('changed');
     }
@@ -115,6 +129,8 @@ export const BatteryChargingModel = GObject.registerClass({
     }
 
     get lit() {
+        if (this._pending !== null)
+            return this._pending;
         return this._supportingBatteries.some(d => d.chargeThresholdEnabled);
     }
 
@@ -127,16 +143,44 @@ export const BatteryChargingModel = GObject.registerClass({
             this.lit ? PRESERVE_BATTERY_HEALTH : MAXIMIZE_CHARGE);
     }
 
-    // A plain switch on every supporting battery. Last-click-wins, the optimistic
-    // display and failure reporting arrive with #23.
-    switchTo(preserve) {
-        for (const device of this._supportingBatteries) {
-            this._upower.setChargeThreshold(device.path, preserve).catch(e =>
-                console.warn(`Battery Charging: switching ${device.nativePath} failed: ${e.message}`));
+    // Optimistic: shows the target mode until every reply to the latest click is in,
+    // then follows UPower again. A superseded click's replies are ignored.
+    async switchTo(preserve) {
+        const click = ++this._click;
+        const targets = this._supportingBatteries;
+        this._pending = preserve;
+        this.emit('changed');
+        const results = await Promise.allSettled(
+            targets.map(d => this._upower.setChargeThreshold(d.path, preserve)));
+        if (click !== this._click || this._destroyed)
+            return;
+        this._pending = null;
+        // A battery that vanished mid-switch has its error dropped.
+        const failed = targets.filter((d, i) =>
+            results[i].status === 'rejected' && this._devices.has(d.path));
+        failed.forEach(d => console.warn(`Battery Charging: switching ${d.nativePath} failed`));
+        this.emit('changed');
+        if (failed.length > 0) {
+            const present = targets.filter(d => this._devices.has(d.path)).length;
+            this._reportFailure(preserve, failed, present);
         }
     }
 
+    _reportFailure(preserve, failed, total) {
+        const mode = preserve ? PRESERVE_BATTERY_HEALTH : MAXIMIZE_CHARGE;
+        let body;
+        if (total === 1 || failed.length === total)
+            body = format(FAILED_BODY, mode);
+        else if (failed.length === 1)
+            body = format(FAILED_BODY_ONE, mode, failed[0].nativePath);
+        else
+            body = format(FAILED_BODY_SOME, mode, String(failed.length),
+                failed.map(d => d.nativePath).join(', '));
+        this.emit('failed', format(FAILED_TITLE, BATTERY_CHARGING), body);
+    }
+
     destroy() {
+        this._destroyed = true;
         // A listing still in flight is dropped too.
         this._generation++;
         this._upowerIds.forEach(id => this._upower.disconnect(id));

@@ -9,7 +9,7 @@ zip=$(realpath "$1")
 out=$(realpath -m "${2:-$here/out}")
 rm -rf "$out"
 mkdir -p "$out"
-expected=5
+expected=6
 
 export BATTERY_CHARGING_TEST_OUT=$out
 timeout 180 dbus-run-session -- bash -c '
