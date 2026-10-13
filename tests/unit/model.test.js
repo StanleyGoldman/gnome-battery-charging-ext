@@ -232,3 +232,13 @@ test('threshold values and settings support are never read', async () => {
 
     assertEqual([model.visible, model.lit, model.subtitle], [true, true, 'Preserve'], 'visible, lit, subtitle');
 });
+
+test('switchTo applies the mode to every supporting battery and skips the rest', async () => {
+    const first = battery();
+    const second = battery();
+    const peripheral = battery({powerSupply: false});
+    const upower = new FakeUPower({devices: [first, second, peripheral]});
+    const model = await modelFor(upower);
+    model.switchTo(true);
+    assertEqual(upower.setCalls, [[first.path, true], [second.path, true]], 'calls');
+});
