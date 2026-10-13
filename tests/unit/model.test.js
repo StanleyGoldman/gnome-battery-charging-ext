@@ -19,7 +19,7 @@ test('a peripheral battery is ignored', async () => {
     assertEqual(model.visible, false, 'visible');
 });
 
-test('a battery without charge limit support is ignored', async () => {
+test('a battery whose firmware cannot hold its charge below full is ignored', async () => {
     const model = await modelFor(new FakeUPower({devices: [battery({chargeThresholdSupported: false})]}));
     assertEqual(model.visible, false, 'visible');
 });
@@ -207,4 +207,28 @@ test('destroy stops following UPower', async () => {
     model.destroy();
 
     assertEqual(upower.connectionCount, 0, 'connections left on UPower');
+});
+
+test('when UPower restarts without going away first, the old batteries are dropped', async () => {
+    const upower = new FakeUPower({devices: [battery()]});
+    const model = await modelFor(upower);
+
+    upower.appear({devices: []});
+    await settle();
+
+    assertEqual(model.visible, false, 'visible');
+});
+
+test('threshold values and settings support are never read', async () => {
+    const bat = battery({chargeThresholdEnabled: true});
+    for (const name of ['chargeThresholdSettingsSupported', 'chargeStartThreshold', 'chargeEndThreshold']) {
+        Object.defineProperty(bat, name, {
+            get() {
+                throw new Error(`${name} was read`);
+            },
+        });
+    }
+    const model = await modelFor(new FakeUPower({devices: [bat]}));
+
+    assertEqual([model.visible, model.lit, model.subtitle], [true, true, 'Preserve'], 'visible, lit, subtitle');
 });

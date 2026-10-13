@@ -10,11 +10,11 @@ export function takeTests() {
     return tests.splice(0);
 }
 
-function show(value) {
+function serialize(value) {
     return JSON.stringify(value);
 }
 
 export function assertEqual(actual, expected, what = 'value') {
-    if (show(actual) !== show(expected))
-        throw new Error(`${what}: expected ${show(expected)}, got ${show(actual)}`);
+    if (serialize(actual) !== serialize(expected))
+        throw new Error(`${what}: expected ${serialize(expected)}, got ${serialize(actual)}`);
 }

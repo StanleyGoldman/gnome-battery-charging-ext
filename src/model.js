@@ -36,6 +36,7 @@ export const BatteryChargingModel = GObject.registerClass({
         super();
         this._upower = upower;
         this._devices = new Map(); // object path -> device
+        this._poweredByUps = false;
         this._generation = 0;
         this._removedWhileLoading = null;
         this._upowerIds = [
@@ -51,6 +52,8 @@ export const BatteryChargingModel = GObject.registerClass({
 
     async _load() {
         const generation = ++this._generation;
+        // A restart can arrive without UPower going away first.
+        this._devices.clear();
         this._removedWhileLoading = new Set();
         let listing;
         try {
@@ -64,7 +67,7 @@ export const BatteryChargingModel = GObject.registerClass({
         // UPower went away or restarted while this listing was in flight.
         if (generation !== this._generation)
             return;
-        this._onUps = displayDeviceType === DEVICE_TYPE_UPS;
+        this._poweredByUps = displayDeviceType === DEVICE_TYPE_UPS;
         // Batteries added while the listing was in flight are already here;
         // ones removed meanwhile may still be in it.
         for (const device of devices) {
@@ -94,13 +97,13 @@ export const BatteryChargingModel = GObject.registerClass({
     }
 
     _onDeviceChanged(propertyNames) {
-        // Percentage and rate updates arrive constantly; only the limit matters.
+        // Percentage and rate updates arrive constantly; only Battery Charging matters.
         if (propertyNames.some(name => name.startsWith('ChargeThreshold')))
             this.emit('changed');
     }
 
     get _supportingBatteries() {
-        if (this._onUps)
+        if (this._poweredByUps)
             return [];
         return [...this._devices.values()].filter(d =>
             d.type === DEVICE_TYPE_BATTERY && d.powerSupply && d.chargeThresholdSupported);
