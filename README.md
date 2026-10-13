@@ -2,11 +2,18 @@
 
 A GNOME Shell extension that switches **Battery Charging** between **Maximize Charge** and **Preserve Battery Health** from Quick Settings, next to Power Mode.
 
+<p>
+  <img src="docs/screenshots/quick-settings.png" alt="Quick Settings with the Battery toggle lit: Preserve Battery Health is on" width="420">
+  <img src="docs/screenshots/menu.png" alt="The Battery toggle's menu: Maximize Charge, and Preserve Battery Health ticked" width="420">
+</p>
+
 - **The toggle** is lit while Preserve Battery Health is on. Click it to switch modes, or open its menu to pick one.
 - **The setting** is UPower's, the same one GNOME Settings' Power page shows, so the two always agree. The extension stores nothing of its own and has no preferences.
 - **Every supporting battery** (a laptop battery whose firmware lets UPower limit its charge) is switched together. The toggle is hidden on machines without one.
 - **A refused switch** (for example from a remote or inactive session) snaps the toggle back and posts a notification.
 - **On GNOME 50**, a battery icon with a heart shows in the top bar while Preserve Battery Health is on.
+
+  <img src="docs/screenshots/top-bar.png" alt="The top bar with the battery-and-heart icon at its left">
 
 It needs UPower 1.90.6 or later and a supporting battery. `src/metadata.json` lists the GNOME Shell versions it has been checked on.
 
@@ -30,6 +37,7 @@ gnome-extensions enable battery-charging@stanleygoldman.github.io
 |---|---|
 | `make test` | Runs the unit tests under `gjs`. Fast. |
 | `make test-integration` | Packs the extension, then runs the headless GNOME Shell tests against a mock UPower. |
+| `make screenshots` | Packs the extension, then retakes the README screenshots in `docs/screenshots/` in a headless GNOME Shell against a mock UPower. |
 | `make pack` | Builds the installable zip in `dist/`. |
 | `make install` | Packs the zip and installs it for the current user. |
 | `make uninstall` | Uninstalls it for the current user. |
