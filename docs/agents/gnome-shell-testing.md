@@ -43,3 +43,10 @@ objects (`Gjs-CRITICAL ... has been already disposed`).
 `tests/integration/mock-upower.py --fifo PATH` takes its commands from a FIFO; `help` lists them.
 The shell-side script writes to the FIFO and reads the mock's log (`EnableChargeThreshold(false)
 on BAT0`) to see which calls arrived. `return` is a no-op while the mock still owns the name.
+
+## Translations and parallel runs
+
+- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
+- **A young headless shell is another session's live run** (the display-lock bullet above): wait for it, and kill only an old one. `ps -eo pid,etime,args | awk '/[a]utomation-script/'` shows the age.
+- **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
+- **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.
