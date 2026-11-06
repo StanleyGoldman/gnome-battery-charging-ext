@@ -34,7 +34,7 @@ coverage:
 	genhtml --quiet --rc function_coverage=0 --output-directory $(COVERAGE_DIR)/html $(COVERAGE_DIR)/coverage.lcov
 	$(if $(BASE),git diff --no-color --no-ext-diff -U0 --src-prefix=a/ --dst-prefix=b/ \
 		$(BASE) -- src > $(COVERAGE_DIR)/changes.diff)
-	gjs -m scripts/write-coverage-summary.js $(COVERAGE_DIR)/coverage.lcov \
+	gjs -m scripts/print-coverage-summary.js $(COVERAGE_DIR)/coverage.lcov \
 		$(if $(BASE),--diff $(COVERAGE_DIR)/changes.diff) $(wildcard src/*.js) \
 		> $(COVERAGE_DIR)/summary.md
 	cat $(COVERAGE_DIR)/summary.md

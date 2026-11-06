@@ -1,6 +1,6 @@
 // Turns the unit tests' lcov into the Markdown coverage summary that `make coverage`
 // writes, CI puts in the job summary and the PR comment repeats. Pure: the CLI that
-// reads the files is scripts/coverage-report.js.
+// reads the files is scripts/print-coverage-summary.js.
 
 // The PR comment job finds and replaces its earlier comment by this line.
 export const MARKER = '<!-- battery-charging-coverage-report -->';
@@ -49,21 +49,21 @@ function parseDiff(diff) {
 
 // Changed lines in a source gjs never loaded can't be told executable or not, so they're
 // counted apart rather than as uncovered.
-function changedLines(files, sources, diff) {
+function changedLinesSentence(files, sources, diff) {
     const changed = parseDiff(diff);
     let hit = 0;
     let total = 0;
     let unmeasured = 0;
     const unloaded = [];
     for (const source of sources) {
-        const numbers = changed.get(source) ?? new Set();
+        const changedNumbers = changed.get(source) ?? new Set();
         const lines = linesOf(files, source);
         if (!lines) {
-            if (numbers.size > 0) unloaded.push(`\`${source}\``);
-            unmeasured += numbers.size;
+            if (changedNumbers.size > 0) unloaded.push(`\`${source}\``);
+            unmeasured += changedNumbers.size;
             continue;
         }
-        for (const number of numbers) {
+        for (const number of changedNumbers) {
             if (!lines.has(number)) continue;
             total++;
             if (lines.get(number) > 0) hit++;
@@ -107,6 +107,6 @@ export function summarize({lcov, sources, diff = null}) {
         out.push(`| \`${source}\` | ${fileHit}/${lines.size} | ${percent(fileHit, lines.size)} |`);
     }
     out.push(`| **Total** | **${hit}/${total}** | **${percent(hit, total)}** |`);
-    if (diff !== null) out.push('', changedLines(files, sources, diff));
+    if (diff !== null) out.push('', changedLinesSentence(files, sources, diff));
     return `${out.join('\n')}\n`;
 }

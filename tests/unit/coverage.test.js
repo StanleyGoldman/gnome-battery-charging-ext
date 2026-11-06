@@ -25,6 +25,10 @@ function lines(markdown) {
     return markdown.split('\n');
 }
 
+function changedSummary(options) {
+    return lines(summarize(options)).filter(line => line.startsWith('**Changed lines'));
+}
+
 test('summarize opens with the marker the PR comment is found by', () => {
     const summary = summarize({lcov: LCOV, sources: ['src/model.js']});
     assertEqual(lines(summary)[0], '<!-- battery-charging-coverage-report -->');
@@ -69,12 +73,10 @@ index 1111111..2222222 100644
 `;
 
 test('summarize reports the share of changed executable lines the tests ran', () => {
-    const summary = summarize({lcov: LCOV, sources: ['src/model.js'], diff: DIFF});
     // Of lines 2-6, the executable ones are 2 (run), 5 and 6 (not run).
-    assertEqual(
-        lines(summary).filter(line => line.startsWith('**Changed lines')),
-        ['**Changed lines:** 1/3 covered (33.3%).']
-    );
+    assertEqual(changedSummary({lcov: LCOV, sources: ['src/model.js'], diff: DIFF}), [
+        '**Changed lines:** 1/3 covered (33.3%).',
+    ]);
 });
 
 test('summarize says so when the change touches no executable source line', () => {
@@ -86,11 +88,9 @@ test('summarize says so when the change touches no executable source line', () =
 +new
 `;
     for (const diff of ['', docsOnly]) {
-        const summary = summarize({lcov: LCOV, sources: ['src/model.js'], diff});
-        assertEqual(
-            lines(summary).filter(line => line.startsWith('**Changed lines')),
-            ['**Changed lines:** no changed source lines.']
-        );
+        assertEqual(changedSummary({lcov: LCOV, sources: ['src/model.js'], diff}), [
+            '**Changed lines:** no changed source lines.',
+        ]);
     }
 });
 
@@ -103,13 +103,10 @@ test('summarize counts changed lines in unloaded sources apart, as unmeasured', 
 +    b();
 `;
     const sources = ['src/extension.js', 'src/model.js'];
-    const changedSummary = diff =>
-        lines(summarize({lcov: LCOV, sources, diff})).filter(line => line.startsWith('**Changed lines'));
-
-    assertEqual(changedSummary(DIFF + extensionDiff), [
+    assertEqual(changedSummary({lcov: LCOV, sources, diff: DIFF + extensionDiff}), [
         '**Changed lines:** 1/3 covered (33.3%). 2 more in sources the unit tests don’t load (`src/extension.js`), not measured.',
     ]);
-    assertEqual(changedSummary(extensionDiff), [
+    assertEqual(changedSummary({lcov: LCOV, sources, diff: extensionDiff}), [
         '**Changed lines:** none the unit tests measure. 2 in sources the unit tests don’t load (`src/extension.js`), not measured.',
     ]);
 });

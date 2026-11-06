@@ -6,7 +6,9 @@
 # (.github/Dockerfile) through .github/in-image.sh. Two differences, on
 # purpose: `typos` runs first, since a prose-only change runs it alone, and
 # there's no `test-integration` step until the headless shell runs in the
-# image (issue #60).
+# image (issue #60). Around the `coverage` step, the job summary and the
+# `coverage` artifact are runner steps with no make target, and the
+# `coverage-comment` job posts the summary to the pull request.
 #
 # Linux only. Don't add a job that assumes Windows or macOS.
 #
@@ -91,11 +93,11 @@ jobs:
       # step list. Remove it with issue #60.
       CI_SKIP_INTEGRATION: "1"
     steps:
-      # Full history, for the coverage step's diff against the pull request's
-      # base.
+      # The merge commit's parents too, for the coverage step's diff against
+      # the pull request's base.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 2
           persist-credentials: false
       # The CI image, as `battery-charging-ci:latest` on the runner's Docker
       # daemon. Its layers live in the GitHub Actions cache, not a registry:
@@ -137,12 +139,13 @@ jobs:
       # GitHub Actions the runner also prints a failing test as an ::error
       # annotation. A failing test fails the step; the coverage figures never
       # do. On a pull request the checkout is GitHub's merge of its branch into
-      # the base, so the lines changed since the base SHA are the pull
-      # request's own.
+      # the base, and the merge's first parent is the base it was built on, so
+      # the lines changed since it are the pull request's own. The event's
+      # base SHA isn't: it doesn't move when `main` does before a re-run.
       - name: coverage
         if: needs.changes.outputs.code != 'false'
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || '' }}
         run: .github/in-image.sh make coverage ${BASE:+BASE="$BASE"}
       - name: coverage summary
         id: coverage-report

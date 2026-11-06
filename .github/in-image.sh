@@ -9,6 +9,9 @@
 # `battery-charging-ci:latest`: the workflow builds it, and `make ci-image`
 # does by hand.
 #
+# Only the checkout is mounted, so in a git worktree, whose .git points outside
+# it, git commands in the image fail (e.g. `make coverage BASE=<commit>`).
+#
 # The command runs as the caller's user, so what it writes to the checkout
 # (dist/, node_modules/) stays the caller's. That user has no home in the
 # image, so HOME is a scratch directory there.
