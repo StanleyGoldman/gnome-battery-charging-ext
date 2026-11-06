@@ -40,11 +40,21 @@ failed in-image run. What the shell needs in a container, and where each is prov
   set` then `Failed to create_socket`. `in-image.sh` mounts a private tmpfs at `/run/user/<uid>`.
 - **A generated `en_US.UTF-8` locale**, for `run.sh`'s `LANG`. Without it: `Locale not understood
   by C library`, and `LANGUAGE=de` has no effect. The Dockerfile runs `locale-gen`.
+- **A passwd entry for the caller's uid.** `in-image.sh` runs as the caller's uid, and
+  `dbus-daemon` refuses an unknown one: `Could not get password database information for UID`,
+  then `dbus-run-session: EOF reading address from bus daemon`. A local run as uid 1000 hides
+  this, since the image's `ubuntu` user owns 1000; the GitHub runner is 1001. The image's
+  entrypoint, `.github/entrypoint.sh`, adds the entry. To reproduce the runner, run the image
+  with `--user 1001:1001` on a copy of the checkout it can write.
 - **A system bus.** `/run/systemd/seats` exists in the image, so the shell assumes logind and
   opens the system bus synchronously at startup. Without one: `JS ERROR: Gio.IOErrorEnum: Could
   not connect` from `loginManager.js`, then `free(): invalid pointer` and a core dump. `run.sh`
   starts an empty private bus as `DBUS_SYSTEM_BUS_ADDRESS` when no system bus exists; the
   shell's calls on it fail softly (`ServiceUnknown` for login1, PolicyKit, GDM).
+
+A pass whose bus fails to start leaves no `<pass>.log`, only `grep: ... No such file` and
+`FAIL:  of 6`: `run.sh` sends `dbus-run-session`'s own stderr to `/dev/null`. Run
+`dbus-run-session -- true` in the container to see why.
 
 Harmless in the container's logs: no Xwayland, colord, AT-SPI bus, GeoClue or backgrounds.
 

@@ -14,7 +14,8 @@
 #
 # The command runs as the caller's user, so what it writes to the checkout
 # (dist/, node_modules/) stays the caller's. That user has no home in the
-# image, so HOME is a scratch directory there.
+# image, so HOME is a scratch directory there; the image's entrypoint
+# (.github/entrypoint.sh) gives it a passwd entry.
 #
 # The headless GNOME Shell (make test-integration) needs XDG_RUNTIME_DIR for its
 # Wayland socket, so the container gets a private one, as a login would.
