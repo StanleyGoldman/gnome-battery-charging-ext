@@ -37,7 +37,7 @@ function mockLog() {
 async function waitFor(what, condition, timeoutMs = 8000) {
     for (let waited = 0; waited < timeoutMs; waited += 100) {
         if (condition()) return;
-        // eslint-disable-next-line no-await-in-loop
+        // eslint-disable-next-line no-await-in-loop -- polling: each check waits for the last.
         await Scripting.sleep(100);
     }
     throw new Error(`timed out waiting for ${what}`);
@@ -233,16 +233,16 @@ async function runTests() {
     Main.panel.statusArea.quickSettings.menu.close();
     for (const [name, body] of TESTS) {
         try {
-            // eslint-disable-next-line no-await-in-loop
+            // eslint-disable-next-line no-await-in-loop -- the tests share one shell and run in order.
             await body();
             console.log(`INTEGRATION PASS ${name}`);
         } catch (e) {
             console.log(`INTEGRATION FAIL ${name}: ${e.message}\n${e.stack}`);
-            // eslint-disable-next-line no-await-in-loop
+            // eslint-disable-next-line no-await-in-loop -- the screenshot belongs to this test, before the next one starts.
             await screenshot(`failed-${name.replace(/\W+/g, '-')}`).catch(() => {});
         }
         resetMock();
-        // eslint-disable-next-line no-await-in-loop
+        // eslint-disable-next-line no-await-in-loop -- the pause belongs between this test and the next.
         await Scripting.sleep(500);
     }
 }

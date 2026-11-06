@@ -19,7 +19,7 @@ export const METRICS = {};
 async function waitFor(what, condition, timeoutMs = 8000) {
     for (let waited = 0; waited < timeoutMs; waited += 100) {
         if (condition()) return;
-        // eslint-disable-next-line no-await-in-loop
+        // eslint-disable-next-line no-await-in-loop -- polling: each check waits for the last.
         await Scripting.sleep(100);
     }
     throw new Error(`timed out waiting for ${what}`);
