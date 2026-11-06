@@ -19,3 +19,7 @@ _Avoid_: Limited, conservation mode, on
 **Supporting battery**:
 A laptop battery that powers the machine and whose firmware lets UPower limit its charge. Peripheral batteries (mouse, headset) never are.
 _Avoid_: Battery (when the distinction matters), device
+
+**Full-battery action**:
+The extension's own setting for what happens once the battery has stayed full for a set wait: **Off** (nothing), **Notify** (offer to switch to Preserve Battery Health) or **Switch automatically** (switch to Preserve Battery Health). Off is the default.
+_Avoid_: Full-charge action, auto-switch, when fully charged (the prefs window's label, not the term)
