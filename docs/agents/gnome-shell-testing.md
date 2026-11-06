@@ -26,11 +26,37 @@ user's session stays untouched. Its gotchas:
 - **Runs queue.** `run.sh` holds a `flock` on `$XDG_RUNTIME_DIR/battery-charging-integration.lock`
   for the whole run, so concurrent `make test-integration` runs wait their turn ("Waiting for
   another integration run..."), and a timed-out run's lock is free while its stuck shell lingers.
-- **In the CI image the headless shell aborts** (issue #60), and the host's apport writes the
-  report to its own `/var/crash`: the report's `ProcCmdline` names `/work/...`. So `make ci` in
-  the image runs with `CI_SKIP_INTEGRATION=1`; after a deliberate in-image run, delete that report.
 - Wrap runs in `timeout` and in `dbus-run-session`, and kill any background helpers (a mock
   service, `sleep infinity`) on exit.
+
+## In a container (the CI image)
+
+`.github/in-image.sh make test-integration` runs the tests in the CI image, as the workflow's
+`integration` job does. A shell that aborts there is caught by the **host's** apport: the report
+lands in the host's `/var/crash`, and its `ProcCmdline` names `/work/...`. Delete it after a
+failed in-image run. What the shell needs in a container, and where each is provided:
+
+- **`XDG_RUNTIME_DIR`**, for the Wayland socket. Without it: `XDG_RUNTIME_DIR is invalid or not
+  set` then `Failed to create_socket`. `in-image.sh` mounts a private tmpfs at `/run/user/<uid>`.
+- **A generated `en_US.UTF-8` locale**, for `run.sh`'s `LANG`. Without it: `Locale not understood
+  by C library`, and `LANGUAGE=de` has no effect. The Dockerfile runs `locale-gen`.
+- **A passwd entry for the caller's uid.** `in-image.sh` runs as the caller's uid, and
+  `dbus-daemon` refuses an unknown one: `Could not get password database information for UID`,
+  then `dbus-run-session: EOF reading address from bus daemon`. A local run as uid 1000 hides
+  this, since the image's `ubuntu` user owns 1000; the GitHub runner is 1001. The image's
+  entrypoint, `.github/entrypoint.sh`, adds the entry. To reproduce the runner, run the image
+  with `--user 1001:1001` on a copy of the checkout it can write.
+- **A system bus.** `/run/systemd/seats` exists in the image, so the shell assumes logind and
+  opens the system bus synchronously at startup. Without one: `JS ERROR: Gio.IOErrorEnum: Could
+  not connect` from `loginManager.js`, then `free(): invalid pointer` and a core dump. `run.sh`
+  starts an empty private bus as `DBUS_SYSTEM_BUS_ADDRESS` when no system bus exists; the
+  shell's calls on it fail softly (`ServiceUnknown` for login1, PolicyKit, GDM).
+
+A pass whose bus fails to start leaves no `<pass>.log`, only `grep: ... No such file` and
+`FAIL:  of 6`: `run.sh` sends `dbus-run-session`'s own stderr to `/dev/null`. Run
+`dbus-run-session -- true` in the container to see why.
+
+Harmless in the container's logs: no Xwayland, colord, AT-SPI bus, GeoClue or backgrounds.
 
 ## Mocking UPower
 

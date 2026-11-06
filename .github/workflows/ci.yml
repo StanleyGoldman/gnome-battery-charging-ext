@@ -5,8 +5,9 @@
 # to one belongs in the other. Every step runs its make target in the CI image
 # (.github/Dockerfile) through .github/in-image.sh. Two differences, on
 # purpose: `typos` runs first, since a prose-only change runs it alone, and
-# there's no `test-integration` step until the headless shell runs in the
-# image (issue #60). Around the `coverage` step, the job summary and the
+# `test-integration` runs in the `integration` job, beside the `checks` job
+# rather than in it, so its headless shells don't hold up the linters and
+# the unit tests. Around the `coverage` step, the job summary and the
 # `coverage` artifact are runner steps with no make target, and the
 # `coverage-comment` job posts the summary to the pull request.
 #
@@ -87,11 +88,6 @@ jobs:
     outputs:
       coverage-report: ${{ steps.coverage-report.outputs.markdown }}
       coverage-artifact-url: ${{ steps.coverage-artifact.outputs.artifact-url }}
-    env:
-      # `make ci` skips the integration tests with this set. No step here runs
-      # `make ci` itself; it's set so one run by hand in this job matches the
-      # step list. Remove it with issue #60.
-      CI_SKIP_INTEGRATION: "1"
     steps:
       # The merge commit's parents too, for the coverage step's diff against
       # the pull request's base.
@@ -171,6 +167,50 @@ jobs:
         if: needs.changes.outputs.code != 'false'
         run: .github/in-image.sh make pack
 
+  # The integration tests: two headless GNOME Shells, English and German,
+  # against the mock UPower (tests/integration/run.sh). Each pass's log goes
+  # up as the `integration-logs` artifact on every run, pass or fail, with a
+  # screenshot of each failed test. docs/agents/gnome-shell-testing.md lists
+  # what the shell needs in a container.
+  integration:
+    needs: changes
+    if: needs.changes.outputs.code != 'false'
+    runs-on: ubuntu-26.04
+    # Each pass times out after 3 minutes, but a stuck shell outlives its
+    # pass until the container exits. This bounds the whole job.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The same image as the `checks` job, from the same layer cache, which
+      # that job alone writes.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: ci image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          DOCKER_BUILD_SUMMARY: "false"
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
+        with:
+          context: .github
+          file: .github/Dockerfile
+          tags: battery-charging-ci:latest
+          load: true
+          cache-from: type=gha,scope=ci-image
+      - name: test-integration
+        run: .github/in-image.sh make test-integration
+      # Each pass's log and its mock UPower's log, and a screenshot of each
+      # failed test. Not the whole directory: it also holds each pass's FIFO,
+      # which the upload can't read.
+      - name: upload integration logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-logs
+          path: |
+            dist/integration/*.log
+            dist/integration/*.png
+
   # Replaces the pull request's coverage comment with the newest report. A
   # separate job so only it holds the token that writes comments, and it runs
   # no build or test. It never runs for a pull request from a fork, whose
@@ -206,7 +246,7 @@ jobs:
 
   # The required check. A job a prose-only change skips counts as passed.
   ci:
-    needs: [changes, checks]
+    needs: [changes, checks, integration]
     if: always()
     runs-on: ubuntu-26.04
     steps:
