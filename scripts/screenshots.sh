@@ -7,7 +7,10 @@ set -euo pipefail
 
 # Headless shells share one Wayland display; queue behind any integration run.
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/battery-charging-integration.lock"
-flock -n 9 || { echo "Waiting for another headless shell to finish..."; flock 9; }
+flock -n 9 || {
+    echo "Waiting for another headless shell to finish..."
+    flock 9
+}
 
 here=$(cd "$(dirname "$0")" && pwd)
 mock=$here/../tests/integration/mock-upower.py
@@ -17,6 +20,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$out"
 
+# shellcheck disable=SC2016 # The inner script expands its own variables, from its arguments.
 timeout 180 dbus-run-session -- bash -c '
     here=$1 mock=$2 zip=$3 out=$4 work=$5
     mkfifo "$work/fifo"

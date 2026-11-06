@@ -9,7 +9,10 @@ set -euo pipefail
 # Queue behind any other run. The children don't inherit the lock, so the kernel drops it
 # when this process exits.
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/battery-charging-integration.lock"
-flock -n 9 || { echo "Waiting for another integration run to finish..."; flock 9; }
+flock -n 9 || {
+    echo "Waiting for another integration run to finish..."
+    flock 9
+}
 
 here=$(cd "$(dirname "$0")" && pwd)
 zip=$(realpath "$1")
@@ -23,6 +26,7 @@ export BATTERY_CHARGING_TEST_OUT=$out
 #   run_pass NAME LANGUAGE   logs to OUT/NAME.log
 run_pass() {
     local name=$1 language=$2
+    # shellcheck disable=SC2016 # The inner script expands its own variables, from its arguments.
     timeout 180 dbus-run-session -- bash -c '
         here=$1 zip=$2 out=$3 name=$4 language=$5
         mkfifo "$out/$name.fifo"
@@ -47,7 +51,10 @@ check_pass() {
     grep -E "INTEGRATION|Gjs-CRITICAL|JS ERROR|already disposed" "$out/$name.log" || true
     passed=$(grep -c "INTEGRATION PASS" "$out/$name.log" || true)
     grep -q "INTEGRATION FAIL" "$out/$name.log" && failed=1
-    grep -qE "Gjs-CRITICAL|already disposed" "$out/$name.log" && { echo "FAIL: the $name log has Gjs-CRITICAL lines"; failed=1; }
+    grep -qE "Gjs-CRITICAL|already disposed" "$out/$name.log" && {
+        echo "FAIL: the $name log has Gjs-CRITICAL lines"
+        failed=1
+    }
     if [[ $passed -ne $expected ]]; then
         echo "FAIL: $passed of $expected $name tests passed (logs in $out)"
         failed=1

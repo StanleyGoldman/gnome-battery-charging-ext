@@ -7,7 +7,7 @@ import {createStrings} from '../../src/strings.js';
 // English: every lookup returns its msgid.
 const english = createStrings({
     _: s => s,
-    ngettext: (one, many, n) => n === 1 ? one : many,
+    ngettext: (one, many, n) => (n === 1 ? one : many),
     dgettext: (_domain, msgid) => msgid,
 });
 
@@ -38,10 +38,12 @@ test('a power supply that is not a battery is ignored', async () => {
 });
 
 test('a UPS display device means no supporting battery', async () => {
-    const model = await modelFor(new FakeUPower({
-        devices: [battery()],
-        displayDeviceType: DeviceType.UPS,
-    }));
+    const model = await modelFor(
+        new FakeUPower({
+            devices: [battery()],
+            displayDeviceType: DeviceType.UPS,
+        })
+    );
     assertEqual(model.visible, false, 'visible');
 });
 
@@ -60,19 +62,22 @@ test('a battery held below full shows Preserve Battery Health', async () => {
 });
 
 test('mixed batteries show lit: any battery held below full counts', async () => {
-    const model = await modelFor(new FakeUPower({devices: [
-        battery({chargeThresholdEnabled: false}),
-        battery({chargeThresholdEnabled: true}),
-    ]}));
+    const model = await modelFor(
+        new FakeUPower({devices: [battery({chargeThresholdEnabled: false}), battery({chargeThresholdEnabled: true})]})
+    );
     assertEqual(model.lit, true, 'lit');
     assertEqual(model.subtitle, 'Preserve', 'subtitle');
 });
 
 test('an ignored battery never lights the toggle', async () => {
-    const model = await modelFor(new FakeUPower({devices: [
-        battery({chargeThresholdEnabled: false}),
-        battery({powerSupply: false, chargeThresholdEnabled: true}),
-    ]}));
+    const model = await modelFor(
+        new FakeUPower({
+            devices: [
+                battery({chargeThresholdEnabled: false}),
+                battery({powerSupply: false, chargeThresholdEnabled: true}),
+            ],
+        })
+    );
     assertEqual(model.lit, false, 'lit');
 });
 
@@ -248,7 +253,14 @@ test('switchTo applies the mode to every supporting battery and skips the rest',
     const upower = new FakeUPower({devices: [first, second, peripheral]});
     const model = await modelFor(upower);
     model.switchTo(true);
-    assertEqual(upower.setCalls, [[first.path, true], [second.path, true]], 'calls');
+    assertEqual(
+        upower.setCalls,
+        [
+            [first.path, true],
+            [second.path, true],
+        ],
+        'calls'
+    );
 });
 
 test('a switch shows the target mode at once, then follows UPower', async () => {
@@ -281,8 +293,11 @@ test('a refused switch snaps back and fails with the finished message', async ()
     upower.releaseSets();
     await settle();
     assertEqual(model.lit, false, 'snapped back');
-    assertEqual(failures, [['Could not change Battery Charging',
-        'Switching to Preserve Battery Health is not allowed.']], 'failures');
+    assertEqual(
+        failures,
+        [['Could not change Battery Charging', 'Switching to Preserve Battery Health is not allowed.']],
+        'failures'
+    );
 });
 
 test('the message for Maximize Charge names that mode', async () => {
@@ -308,7 +323,11 @@ test('a partial failure names the batteries that failed and keeps the others swi
     model.switchTo(true);
     upower.change(a, {chargeThresholdEnabled: true});
     await settle();
-    assertEqual(failures, [`Switching to Preserve Battery Health is not allowed for one battery (${b.nativePath}).`], 'body');
+    assertEqual(
+        failures,
+        [`Switching to Preserve Battery Health is not allowed for one battery (${b.nativePath}).`],
+        'body'
+    );
     assertEqual(model.lit, true, 'a stays switched');
 });
 
@@ -322,7 +341,13 @@ test('several failures are counted and named', async () => {
     model.connect('failed', (_m, _t, body) => failures.push(body));
     model.switchTo(true);
     await settle();
-    assertEqual(failures, [`Switching to Preserve Battery Health is not allowed for 2 batteries (${bats[1].nativePath}, ${bats[2].nativePath}).`], 'body');
+    assertEqual(
+        failures,
+        [
+            `Switching to Preserve Battery Health is not allowed for 2 batteries (${bats[1].nativePath}, ${bats[2].nativePath}).`,
+        ],
+        'body'
+    );
 });
 
 test('when every battery refuses, the message names no device', async () => {
@@ -373,7 +398,7 @@ test('the last click wins: a superseded click never changes the display or notif
     assertEqual([model.lit, failures], [false, []], 'after latest reply');
 });
 
-test('the toggle re-syncs only when the latest click\'s replies have all arrived', async () => {
+test("the toggle re-syncs only when the latest click's replies have all arrived", async () => {
     const [a, b] = [battery(), battery()];
     const upower = new FakeUPower({devices: [a, b]});
     upower.holdSets = true;
@@ -440,14 +465,17 @@ test('the message counts the batteries still present, not those at click time', 
 test('the toggle text comes from the injected translations', async () => {
     const german = createStrings({
         _: s => ({'Maximize': 'Maximal', '%s: %s': '%s: %s', 'Preserve': 'Erhalten'})[s] ?? s,
-        ngettext: (one, many, n) => n === 1 ? one : many,
-        dgettext: (_domain, msgid) => ({
-            'Battery Charging': 'Batterieladung',
-            '_Maximize Charge': '_Maximal laden',
-        })[msgid] ?? msgid,
+        ngettext: (one, many, n) => (n === 1 ? one : many),
+        dgettext: (_domain, msgid) =>
+            ({
+                'Battery Charging': 'Batterieladung',
+                '_Maximize Charge': '_Maximal laden',
+            })[msgid] ?? msgid,
     });
     const model = new BatteryChargingModel(
-        new FakeUPower({devices: [battery({chargeThresholdEnabled: false})]}), german);
+        new FakeUPower({devices: [battery({chargeThresholdEnabled: false})]}),
+        german
+    );
     await settle();
     assertEqual(model.subtitle, 'Maximal', 'subtitle');
     assertEqual(model.accessibleName, 'Batterieladung: Maximal laden', 'accessible name');

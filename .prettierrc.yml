@@ -1,0 +1,10 @@
+# Close to the GJS style in gjs.guide; printWidth 120 keeps the first reformat smallest.
+printWidth: 120
+tabWidth: 4
+useTabs: false
+semi: true
+singleQuote: true
+quoteProps: consistent
+trailingComma: es5
+bracketSpacing: false
+arrowParens: avoid

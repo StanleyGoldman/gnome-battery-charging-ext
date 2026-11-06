@@ -13,17 +13,14 @@ const SHELL = 'gnome-shell';
 // write it two ways: a trailing "(_X)" (common in CJK) or an inline "_" (de:
 // "Batterie_gesundheit erhalten"). "__" is a literal underscore.
 export function stripMnemonic(text) {
-    return text
-        .replace(/\s*[(（]_.[)）]\s*$/u, '')
-        .replace(/__|_/g, match => match === '__' ? '_' : '');
+    return text.replace(/\s*[(（]_.[)）]\s*$/u, '').replace(/__|_/g, match => (match === '__' ? '_' : ''));
 }
 
 // Fills %s and %d in order, or %N$s and %N$d by position, which translators may need
 // to reorder the arguments.
 function format(template, ...args) {
     let next = 0;
-    return template.replace(/%(?:(\d+)\$)?[sd]/g, (_match, position) =>
-        String(args[position ? position - 1 : next++]));
+    return template.replace(/%(?:(\d+)\$)?[sd]/g, (_match, position) => String(args[position ? position - 1 : next++]));
 }
 
 // `failedNames` below are UPower native names (BAT1), not D-Bus paths.
@@ -32,8 +29,7 @@ function format(template, ...args) {
 export function createStrings({_, ngettext, dgettext}) {
     const batteryCharging = dgettext(CONTROL_CENTER, 'Battery Charging');
     const maximizeCharge = stripMnemonic(dgettext(CONTROL_CENTER, '_Maximize Charge'));
-    const preserveBatteryHealth = stripMnemonic(
-        dgettext(CONTROL_CENTER, 'Preserve Battery _Health'));
+    const preserveBatteryHealth = stripMnemonic(dgettext(CONTROL_CENTER, 'Preserve Battery _Health'));
     const powerSettings = dgettext(SHELL, 'Power Settings');
 
     // Translators: toggle title, at most about 10 characters; "Battery Charging" is the full name.
@@ -43,7 +39,7 @@ export function createStrings({_, ngettext, dgettext}) {
     // Translators: toggle subtitle for the mode that holds the battery below full to slow its wear; at most about 10 characters.
     const shortPreserve = _('Preserve');
 
-    const modeName = preserve => preserve ? preserveBatteryHealth : maximizeCharge;
+    const modeName = preserve => (preserve ? preserveBatteryHealth : maximizeCharge);
 
     return {
         batteryCharging,
@@ -54,7 +50,7 @@ export function createStrings({_, ngettext, dgettext}) {
         shortMaximize,
         shortPreserve,
         modeName,
-        shortModeName: preserve => preserve ? shortPreserve : shortMaximize,
+        shortModeName: preserve => (preserve ? shortPreserve : shortMaximize),
 
         // Translators: the toggle's accessible name. The first %s is the setting's name
         // ("Battery Charging"), the second its current mode ("Maximize Charge").
@@ -76,7 +72,8 @@ export function createStrings({_, ngettext, dgettext}) {
                 // (BAT1, or "BAT0, BAT1"). Leave %2$d out of the singular form only in languages where that form means exactly one.
                 'Switching to %1$s is not allowed for one battery (%3$s).',
                 'Switching to %1$s is not allowed for %2$d batteries (%3$s).',
-                failedNames.length);
+                failedNames.length
+            );
             return format(template, mode, failedNames.length, failedNames.join(', '));
         },
     };

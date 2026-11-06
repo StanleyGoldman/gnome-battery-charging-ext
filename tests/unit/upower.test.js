@@ -38,12 +38,10 @@ class FakeProxy {
     fire(name, ...args) {
         // D-Bus signal callbacks take (proxy, sender, args); property handlers (proxy, ...args).
         for (const h of [...this.signals.values()]) {
-            if (h.name === name)
-                h.callback(this, ':1.1', ...args);
+            if (h.name === name) h.callback(this, ':1.1', ...args);
         }
         for (const h of [...this.handlers.values()]) {
-            if (h.name === name)
-                h.callback(this, ...args);
+            if (h.name === name) h.callback(this, ...args);
         }
     }
 
@@ -62,14 +60,15 @@ class FakeBus {
             g_name_owner: ':1.1',
             EnumerateDevicesAsync: async () => [[PATH]],
         });
-        this.newProxy = (kind, path) => new Promise((resolve, reject) =>
-            this.pending.push({kind, path, resolve, reject}));
+        this.newProxy = (kind, path) =>
+            new Promise((resolve, reject) => {
+                this.pending.push({kind, path, resolve, reject});
+            });
     }
 
     take(kind, path) {
         const i = this.pending.findIndex(r => r.kind === kind && r.path === path);
-        if (i === -1)
-            throw new Error(`no pending ${kind} proxy for ${path}`);
+        if (i === -1) throw new Error(`no pending ${kind} proxy for ${path}`);
         return this.pending.splice(i, 1)[0];
     }
 
@@ -80,8 +79,12 @@ class FakeBus {
 
 function devProxy(props = {}) {
     return new FakeProxy({
-        NativePath: 'BAT0', Type: 2, PowerSupply: true,
-        ChargeThresholdSupported: true, ChargeThresholdEnabled: false, ...props,
+        NativePath: 'BAT0',
+        Type: 2,
+        PowerSupply: true,
+        ChargeThresholdSupported: true,
+        ChargeThresholdEnabled: false,
+        ...props,
     });
 }
 
@@ -94,8 +97,7 @@ async function readyClient(bus) {
 
 function record(client, ...signals) {
     const log = [];
-    for (const s of signals)
-        client.connect(s, (...args) => log.push([s, ...args.map(a => a?.path ?? a)]));
+    for (const s of signals) client.connect(s, (...args) => log.push([s, ...args.map(a => a?.path ?? a)]));
     return log;
 }
 
@@ -122,8 +124,11 @@ test('a device removed while its proxy loads is never reported', async () => {
     await settle();
     assertEqual(log, [['device-removed', PATH]], 'signals');
     await client.setChargeThreshold(PATH, true).then(
-        () => { throw new Error('expected a rejection'); },
-        e => assertEqual(e.message, `${PATH} is gone`, 'switch error'));
+        () => {
+            throw new Error('expected a rejection');
+        },
+        e => assertEqual(e.message, `${PATH} is gone`, 'switch error')
+    );
     assertEqual(proxy.listeners, 0, 'listeners on the dropped proxy');
 });
 
@@ -193,8 +198,11 @@ test('enumerate reports a device that loads', async () => {
     await settle();
     bus.resolve('device', PATH, devProxy());
     const {devices} = await listing;
-    assertEqual(devices.map(d => [d.path, d.nativePath, d.chargeThresholdSupported]),
-        [[PATH, 'BAT0', true]], 'devices');
+    assertEqual(
+        devices.map(d => [d.path, d.nativePath, d.chargeThresholdSupported]),
+        [[PATH, 'BAT0', true]],
+        'devices'
+    );
 });
 
 test('a device whose proxy fails to load is skipped without breaking enumerate', async () => {
@@ -254,8 +262,11 @@ test('a UPower restart drops the devices already loaded', async () => {
     bus.upower.fire('notify::g-name-owner');
     assertEqual(proxy.listeners, 0, 'listeners');
     await client.setChargeThreshold(PATH, true).then(
-        () => { throw new Error('expected a rejection'); },
-        e => assertEqual(e.message, `${PATH} is gone`, 'switch error'));
+        () => {
+            throw new Error('expected a rejection');
+        },
+        e => assertEqual(e.message, `${PATH} is gone`, 'switch error')
+    );
 });
 
 test('a changed device reports the changed property names', async () => {

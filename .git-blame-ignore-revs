@@ -1,0 +1,4 @@
+# Mechanical reformats. Use with: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Reformat with make format (#57)
+6816d2b83582d2c3cb1eb9a0ead799c6cee773de

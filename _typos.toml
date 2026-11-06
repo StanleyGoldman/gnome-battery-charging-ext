@@ -1,0 +1,4 @@
+# Project words and false positives for `typos` (make typos).
+[default.extend-words]
+# "PNGs" splits into "PN" + "Gs".
+PN = "PN"

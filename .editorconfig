@@ -1,0 +1,15 @@
+# shfmt reads its options from here.
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+
+[*.{js,py,sh}]
+indent_style = space
+indent_size = 4
+
+[*.sh]
+switch_case_indent = true
+binary_next_line = true
