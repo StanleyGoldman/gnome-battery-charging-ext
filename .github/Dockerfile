@@ -18,10 +18,11 @@ FROM ubuntu:26.04
 # - nodejs, npm: ESLint and Prettier (make lint-js). shellcheck, shfmt: make
 #   lint-sh; actionlint also runs shellcheck on the workflow's scripts.
 # - lcov: the unit-test coverage report.
+# - locales: locale-gen, below.
 RUN apt-get update -qq && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
       ca-certificates curl dbus gettext gjs gnome-shell git language-pack-gnome-de \
-      lcov make nodejs npm python3-gi shellcheck shfmt && \
+      lcov locales make nodejs npm python3-gi shellcheck shfmt && \
     rm -rf /var/lib/apt/lists/*
 
 # tests/integration/run.sh runs the shell under LANG=en_US.UTF-8, since

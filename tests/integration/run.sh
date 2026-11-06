@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Runs the integration tests: a headless GNOME Shell (50+) with the packed extension,
-# against the mock UPower, on a private session bus. Nothing touches the real session.
+# against the mock UPower, on a private session bus (and a private system bus where there's
+# none, as in a container). Nothing touches the real session.
 #
 #   run.sh ZIP [OUT_DIR]     logs, and screenshots of failures, land in OUT_DIR
 set -euo pipefail

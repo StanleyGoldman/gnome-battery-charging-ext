@@ -176,6 +176,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code != 'false'
     runs-on: ubuntu-26.04
+    # Each pass times out after 3 minutes, but a stuck shell outlives its
+    # pass until the container exits. This bounds the whole job.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -196,8 +199,9 @@ jobs:
           cache-from: type=gha,scope=ci-image
       - name: test-integration
         run: .github/in-image.sh make test-integration
-      # The logs and screenshots only: the output directory also holds each
-      # pass's FIFO, which the upload can't read.
+      # Each pass's log and its mock UPower's log, and a screenshot of each
+      # failed test. Not the whole directory: it also holds each pass's FIFO,
+      # which the upload can't read.
       - name: upload integration logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

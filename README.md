@@ -46,7 +46,7 @@ gnome-extensions enable battery-charging@stanleygoldman.github.io
 | `make lint` | Runs every check and fails on any finding: ESLint and Prettier on the JavaScript, shellcheck and shfmt on the shell scripts, ruff on the Python, actionlint on the GitHub Actions workflows, and `typos`. `make -k lint` reports every failing group. |
 | `make format` | Rewrites the JavaScript, shell and Python files in place with Prettier, shfmt and ruff. |
 | `make typos` | Spell-checks the repo. Project words and false positives go in `_typos.toml`. |
-| `make check-deps` | Lists missing tools and the commands that install them: an `apt` line, plus `uv tool install ruff`, `cargo install typos-cli` and `go install` for actionlint. It never runs `sudo`. |
+| `make check-deps` | Lists missing tools and the commands that install them: an `apt` line, plus `uv tool install ruff`, `cargo install typos-cli`, `go install` for actionlint and `sudo locale-gen en_US.UTF-8` for the integration tests' locale. It never runs `sudo` itself. |
 | `make ci` | Runs every check CI runs, in order: the linters, `typos`, the unit tests (through `make coverage`), `pack` and the integration tests. |
 | `make ci-image` | Builds the CI image, `battery-charging-ci:latest`, from `.github/Dockerfile`: Ubuntu 26.04 (GNOME Shell 50) with every tool the checks need, at pinned versions. Needs Docker. |
 | `make ci-docker` | Builds the CI image, then runs `make ci` in it with the checkout mounted, as CI does, so a green run predicts a green CI. |
@@ -55,7 +55,7 @@ gnome-extensions enable battery-charging@stanleygoldman.github.io
 
 CI (`.github/workflows/ci.yml`) runs each of `make ci`'s checks as a step of its own in the CI image, on every pull request and push to `main`. A change to Markdown, `docs/` or `.claude/` alone runs only `typos`. `.github/in-image.sh <command>` runs any command in the image the same way.
 
-CI runs the integration tests in a job of their own and uploads each language pass's log as the `integration-logs` artifact, pass or fail.
+CI runs the integration tests in a job of their own and uploads each language pass's log, with the mock UPower's logs and a screenshot of each failed test, as the `integration-logs` artifact, pass or fail.
 
 CI puts the coverage summary in the run's job summary and uploads the lcov, HTML report and summary as the `coverage` artifact. On a pull request from this repository it also keeps one coverage comment, replaced on every push, with the share of the pull request's changed lines the tests ran. Coverage counts the unit tests alone: lines only the integration tests reach show as uncovered, and `src/extension.js`, which the unit tests never load, is listed as not loaded, its changed lines counted apart as not measured.
 

@@ -5,7 +5,7 @@
 set -euo pipefail
 
 missing=()
-# Tools apt doesn't carry: "name: install command".
+# What apt doesn't install, tools and setup steps alike: "name: install command".
 others=()
 
 have() { command -v "$1" >/dev/null 2>&1; }
