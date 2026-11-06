@@ -61,7 +61,9 @@ class FakeBus {
             EnumerateDevicesAsync: async () => [[PATH]],
         });
         this.newProxy = (kind, path) =>
-            new Promise((resolve, reject) => this.pending.push({kind, path, resolve, reject}));
+            new Promise((resolve, reject) => {
+                this.pending.push({kind, path, resolve, reject});
+            });
     }
 
     take(kind, path) {
