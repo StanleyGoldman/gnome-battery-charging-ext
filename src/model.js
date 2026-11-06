@@ -10,7 +10,7 @@
 //     'device-added' (device)
 //     'device-removed' (path)
 //     'device-changed' (path, propertyNames)  D-Bus names, e.g. 'ChargeThresholdEnabled'
-// and the strings from createStrings() in strings.js (docs/spec.md §5).
+// and the strings from createStrings() in strings.js (docs/spec.md §6).
 // A device is {path, nativePath, type, powerSupply, chargeThresholdSupported,
 // chargeThresholdEnabled}, its properties kept current by the interface.
 
