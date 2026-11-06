@@ -60,15 +60,15 @@ function dbusProxyFactory(bus) {
         });
 }
 
+function upowerBus() {
+    return GLib.getenv('BATTERY_CHARGING_UPOWER_BUS') === 'session' ? Gio.DBus.session : Gio.DBus.system;
+}
+
 export class UPowerClient {
     constructor({newProxy, warn = msg => console.warn(msg)} = {}) {
         // Only look up the bus when nothing was injected: the getter connects to it, and the
         // unit tests run where there's no system bus.
-        this._newProxy =
-            newProxy ??
-            dbusProxyFactory(
-                GLib.getenv('BATTERY_CHARGING_UPOWER_BUS') === 'session' ? Gio.DBus.session : Gio.DBus.system
-            );
+        this._newProxy = newProxy ?? dbusProxyFactory(upowerBus());
         this._warn = warn;
         this._cancellable = new Gio.Cancellable();
         this._handlers = new Map(); // id -> {signal, callback}

@@ -87,7 +87,8 @@ typos:
 
 ## Run every check CI runs, in order. CI_SKIP_INTEGRATION=1 skips the integration tests.
 # .github/workflows/ci.yml runs these same targets, each as a step of its own;
-# change the list here and the workflow's steps together.
+# change the list here and the workflow's steps together. The workflow runs typos
+# first, and has no test-integration step until issue #60.
 ci: lint-js lint-sh lint-py lint-actions typos test pack $(if $(CI_SKIP_INTEGRATION),,test-integration)
 
 ## Build the CI image (.github/Dockerfile) as $(CI_IMAGE).
@@ -104,6 +105,6 @@ node_modules: package.json package-lock.json
 	npm ci
 	@touch $@
 
-## List missing tools and the apt line that installs them. Never runs sudo.
+## List missing tools and the commands (an apt line and others) that install them. Never runs sudo.
 check-deps:
 	@./scripts/check-deps.sh

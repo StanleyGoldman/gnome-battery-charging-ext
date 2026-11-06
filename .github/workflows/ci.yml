@@ -3,7 +3,10 @@
 # local `make ci-docker` predicts a green run here. The step list below and the
 # `ci` target's prerequisites in the Makefile must stay in sync: a check added
 # to one belongs in the other. Every step runs its make target in the CI image
-# (.github/Dockerfile) through .github/in-image.sh.
+# (.github/Dockerfile) through .github/in-image.sh. Two differences, on
+# purpose: `typos` runs first, since a prose-only change runs it alone, and
+# there's no `test-integration` step until the headless shell runs in the
+# image (issue #60).
 #
 # Linux only. Don't add a job that assumes Windows or macOS.
 #
@@ -66,6 +69,8 @@ jobs:
               || format('{0}..{1}', github.event.before, github.sha) }}
         run: |
           code=false
+          # When git can't take the range (a new branch's zero `before`, a
+          # force-push), the echo is a line no pattern skips, so code=true.
           while IFS= read -r file; do
             case "$file" in
               *.md | docs/* | .claude/*) ;;
@@ -78,8 +83,9 @@ jobs:
     needs: changes
     runs-on: ubuntu-26.04
     env:
-      # Until the integration tests run in CI (issue #60), `make ci` here
-      # skips them; locally it runs them.
+      # `make ci` skips the integration tests with this set. No step here runs
+      # `make ci` itself; it's set so one run by hand in this job matches the
+      # step list. Remove it with issue #60.
       CI_SKIP_INTEGRATION: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
