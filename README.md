@@ -36,6 +36,7 @@ gnome-extensions enable battery-charging@stanleygoldman.github.io
 | Target | What it does |
 |---|---|
 | `make test` | Runs the unit tests under `gjs`. Fast. |
+| `make coverage` | Runs the unit tests with coverage of `src/`. Writes `dist/coverage/coverage.lcov`, an HTML report in `dist/coverage/html/` and a Markdown table of line coverage per file in `dist/coverage/summary.md`. `BASE=<commit>` adds the share of the lines changed since that commit that the tests ran. A low figure never fails it; a failing test does. |
 | `make test-integration` | Packs the extension, then runs the headless GNOME Shell tests against a mock UPower. |
 | `make screenshots` | Packs the extension, then retakes the README screenshots in `docs/screenshots/` in a headless GNOME Shell against a mock UPower. |
 | `make pack` | Builds the installable zip in `dist/`. |
@@ -46,13 +47,15 @@ gnome-extensions enable battery-charging@stanleygoldman.github.io
 | `make format` | Rewrites the JavaScript, shell and Python files in place with Prettier, shfmt and ruff. |
 | `make typos` | Spell-checks the repo. Project words and false positives go in `_typos.toml`. |
 | `make check-deps` | Lists missing tools and the commands that install them: an `apt` line, plus `uv tool install ruff`, `cargo install typos-cli` and `go install` for actionlint. It never runs `sudo`. |
-| `make ci` | Runs every check CI runs, in order: the linters, `typos`, the unit tests, `pack` and the integration tests. `CI_SKIP_INTEGRATION=1` skips the integration tests. |
+| `make ci` | Runs every check CI runs, in order: the linters, `typos`, the unit tests (through `make coverage`), `pack` and the integration tests. `CI_SKIP_INTEGRATION=1` skips the integration tests. |
 | `make ci-image` | Builds the CI image, `battery-charging-ci:latest`, from `.github/Dockerfile`: Ubuntu 26.04 (GNOME Shell 50) with every tool the checks need, at pinned versions. Needs Docker. |
 | `make ci-docker` | Builds the CI image, then runs `make ci` in it with the checkout mounted, as CI does, so a green run predicts a green CI. It skips the integration tests, which don't run in the image yet. |
 
 `make lint` and `make format` install the pinned ESLint and Prettier into `node_modules/` with `npm ci` on first use. Lint rule exceptions are made on the one line, with a comment giving the reason, not repo-wide. To skip the mechanical reformat in `git blame`, run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once.
 
 CI (`.github/workflows/ci.yml`) runs each of `make ci`'s checks as a step of its own in the CI image, on every pull request and push to `main`. A change to Markdown, `docs/` or `.claude/` alone runs only `typos`. `.github/in-image.sh <command>` runs any command in the image the same way.
+
+CI puts the coverage summary in the run's job summary and uploads the lcov, HTML report and summary as the `coverage` artifact. On a pull request from this repository it also keeps one coverage comment, replaced on every push, with the share of the pull request's changed lines the tests ran. Coverage counts the unit tests alone: lines only the integration tests reach show as uncovered, and `src/extension.js`, which the unit tests never load, is listed as not loaded, its changed lines counted apart as not measured.
 
 Before a release, work through [`docs/release-checklist.md`](docs/release-checklist.md).
 

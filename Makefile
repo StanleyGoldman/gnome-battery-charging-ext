@@ -10,13 +10,34 @@ SH_FILES := $(wildcard scripts/*.sh tests/*/*.sh .github/*.sh)
 PY_FILES := $(wildcard scripts/*.py tests/*/*.py)
 NODE_BIN := node_modules/.bin
 CI_IMAGE := battery-charging-ci:latest
+COVERAGE_DIR := dist/coverage
 
-.PHONY: test test-integration screenshots pack pot install uninstall check-deps \
+.PHONY: test coverage test-integration screenshots pack pot install uninstall check-deps \
 	lint lint-js lint-sh lint-py lint-actions format typos ci ci-image ci-docker
 
 ## Run the unit tests.
 test:
 	gjs -m tests/unit/run.js $(UNIT_TESTS)
+
+## Run the unit tests with coverage of src/: writes $(COVERAGE_DIR)/coverage.lcov, an HTML
+## report in $(COVERAGE_DIR)/html and the Markdown summary.md. BASE=<commit> adds the share
+## of the lines changed since that commit the tests ran. Never fails on a percentage.
+# gjs matches --coverage-prefix against module URIs, so a bare path matches nothing. It
+# copies each covered source under the output directory, where genhtml reads it. The
+# report is of lines only: genhtml rejects the function records, since gjs gives
+# different anonymous functions the same name.
+coverage:
+	rm -rf $(COVERAGE_DIR)
+	mkdir -p $(COVERAGE_DIR)
+	gjs --coverage-prefix=file://$(CURDIR)/src --coverage-output=$(COVERAGE_DIR) \
+		-m tests/unit/run.js $(UNIT_TESTS)
+	genhtml --quiet --rc function_coverage=0 --output-directory $(COVERAGE_DIR)/html $(COVERAGE_DIR)/coverage.lcov
+	$(if $(BASE),git diff --no-color --no-ext-diff -U0 --src-prefix=a/ --dst-prefix=b/ \
+		$(BASE) -- src > $(COVERAGE_DIR)/changes.diff)
+	gjs -m scripts/print-coverage-summary.js $(COVERAGE_DIR)/coverage.lcov \
+		$(if $(BASE),--diff $(COVERAGE_DIR)/changes.diff) $(wildcard src/*.js) \
+		> $(COVERAGE_DIR)/summary.md
+	cat $(COVERAGE_DIR)/summary.md
 
 ## Pack the extension, then run the headless integration tests (GNOME Shell 50).
 test-integration: $(ZIP)
@@ -88,8 +109,9 @@ typos:
 ## Run every check CI runs, in order. CI_SKIP_INTEGRATION=1 skips the integration tests.
 # .github/workflows/ci.yml runs these same targets, each as a step of its own;
 # change the list here and the workflow's steps together. The workflow runs typos
-# first, and has no test-integration step until issue #60.
-ci: lint-js lint-sh lint-py lint-actions typos test pack $(if $(CI_SKIP_INTEGRATION),,test-integration)
+# first, and has no test-integration step until issue #60. `ci` runs the unit tests
+# through `coverage`, which also fails on a failing test.
+ci: lint-js lint-sh lint-py lint-actions typos coverage pack $(if $(CI_SKIP_INTEGRATION),,test-integration)
 
 ## Build the CI image (.github/Dockerfile) as $(CI_IMAGE).
 ci-image:
