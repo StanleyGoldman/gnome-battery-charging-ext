@@ -27,6 +27,7 @@ export const BatteryChargingModel = GObject.registerClass(
             failed: {param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING]},
         },
     },
+    // eslint-disable-next-line no-shadow -- registerClass names the GType after the class, so the names match.
     class BatteryChargingModel extends GObject.Object {
         constructor(upower, strings) {
             super();

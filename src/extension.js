@@ -15,6 +15,7 @@ import {UPowerClient} from './upower.js';
 const SHELL_MAJOR = parseInt(PACKAGE_VERSION.split('.')[0]);
 
 const BatteryChargingToggle = GObject.registerClass(
+    // eslint-disable-next-line no-shadow -- registerClass names the GType after the class, so the names match.
     class BatteryChargingToggle extends QuickMenuToggle {
         constructor(extension, model, strings) {
             const params = {title: strings.title};
@@ -67,6 +68,7 @@ const BatteryChargingToggle = GObject.registerClass(
 );
 
 const BatteryChargingIndicator = GObject.registerClass(
+    // eslint-disable-next-line no-shadow -- registerClass names the GType after the class, so the names match.
     class BatteryChargingIndicator extends SystemIndicator {
         constructor(extension, model, strings) {
             super();
