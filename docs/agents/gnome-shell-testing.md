@@ -26,6 +26,9 @@ user's session stays untouched. Its gotchas:
 - **Runs queue.** `run.sh` holds a `flock` on `$XDG_RUNTIME_DIR/battery-charging-integration.lock`
   for the whole run, so concurrent `make test-integration` runs wait their turn ("Waiting for
   another integration run..."), and a timed-out run's lock is free while its stuck shell lingers.
+- **In the CI image the headless shell aborts** (issue #60), and the host's apport writes the
+  report to its own `/var/crash`: the report's `ProcCmdline` names `/work/...`. So `make ci` in
+  the image runs with `CI_SKIP_INTEGRATION=1`; after a deliberate in-image run, delete that report.
 - Wrap runs in `timeout` and in `dbus-run-session`, and kill any background helpers (a mock
   service, `sleep infinity`) on exit.
 
