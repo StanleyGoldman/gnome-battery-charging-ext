@@ -26,6 +26,7 @@ export BATTERY_CHARGING_TEST_OUT=$out
 #   run_pass NAME LANGUAGE   logs to OUT/NAME.log
 run_pass() {
     local name=$1 language=$2
+    # shellcheck disable=SC2016 # The inner script expands its own variables, from its arguments.
     timeout 180 dbus-run-session -- bash -c '
         here=$1 zip=$2 out=$3 name=$4 language=$5
         mkfifo "$out/$name.fifo"

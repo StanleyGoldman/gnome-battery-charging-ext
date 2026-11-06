@@ -20,6 +20,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$out"
 
+# shellcheck disable=SC2016 # The inner script expands its own variables, from its arguments.
 timeout 180 dbus-run-session -- bash -c '
     here=$1 mock=$2 zip=$3 out=$4 work=$5
     mkfifo "$work/fifo"
