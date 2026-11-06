@@ -55,6 +55,8 @@ gnome-extensions enable battery-charging@stanleygoldman.github.io
 
 CI (`.github/workflows/ci.yml`) runs each of `make ci`'s checks as a step of its own in the CI image, on every pull request and push to `main`. A change to Markdown, `docs/` or `.claude/` alone runs only `typos`. `.github/in-image.sh <command>` runs any command in the image the same way.
 
+The `Protect main` ruleset makes every change to `main` go through a pull request, and requires the `ci` check, the workflow's last job, which passes only when every other job passed or was skipped. A pull request doesn't need to be up to date with `main` to merge. Each merge's own run on `main` checks the result.
+
 CI runs the integration tests in a job of their own and uploads each language pass's log, with the mock UPower's logs and a screenshot of each failed test, as the `integration-logs` artifact, pass or fail.
 
 CI puts the coverage summary in the run's job summary and uploads the lcov, HTML report and summary as the `coverage` artifact. On a pull request from this repository it also keeps one coverage comment, replaced on every push, with the share of the pull request's changed lines the tests ran. Coverage counts the unit tests alone: lines only the integration tests reach show as uncovered, and `src/extension.js`, which the unit tests never load, is listed as not loaded, its changed lines counted apart as not measured.
