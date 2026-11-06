@@ -42,12 +42,17 @@ gnome-extensions enable battery-charging@stanleygoldman.github.io
 | `make install` | Packs the zip and installs it for the current user. |
 | `make uninstall` | Uninstalls it for the current user. |
 | `make pot` | Regenerates the translation template, `po/battery-charging@stanleygoldman.github.io.pot`. |
-| `make lint` | Runs every check and fails on any finding: ESLint and Prettier on the JavaScript, shellcheck and shfmt on the shell scripts, ruff on the Python, and `typos`. `make -k lint` reports every failing group. |
+| `make lint` | Runs every check and fails on any finding: ESLint and Prettier on the JavaScript, shellcheck and shfmt on the shell scripts, ruff on the Python, actionlint on the GitHub Actions workflows, and `typos`. `make -k lint` reports every failing group. |
 | `make format` | Rewrites the JavaScript, shell and Python files in place with Prettier, shfmt and ruff. |
 | `make typos` | Spell-checks the repo. Project words and false positives go in `_typos.toml`. |
-| `make check-deps` | Lists missing tools and the commands that install them: an `apt` line, plus `uv tool install ruff` and `cargo install typos-cli`. It never runs `sudo`. |
+| `make check-deps` | Lists missing tools and the commands that install them: an `apt` line, plus `uv tool install ruff`, `cargo install typos-cli` and `go install` for actionlint. It never runs `sudo`. |
+| `make ci` | Runs every check CI runs, in order: the linters, `typos`, the unit tests, `pack` and the integration tests. `CI_SKIP_INTEGRATION=1` skips the integration tests. |
+| `make ci-image` | Builds the CI image, `battery-charging-ci:latest`, from `.github/Dockerfile`: Ubuntu 26.04 (GNOME Shell 50) with every tool the checks need, at pinned versions. Needs Docker. |
+| `make ci-docker` | Builds the CI image, then runs `make ci` in it with the checkout mounted, as CI does, so a green run predicts a green CI. It skips the integration tests, which don't run in the image yet. |
 
 `make lint` and `make format` install the pinned ESLint and Prettier into `node_modules/` with `npm ci` on first use. Lint rule exceptions are made on the one line, with a comment giving the reason, not repo-wide. To skip the mechanical reformat in `git blame`, run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once.
+
+CI (`.github/workflows/ci.yml`) runs each of `make ci`'s checks as a step of its own in the CI image, on every pull request and push to `main`. A change to Markdown, `docs/` or `.claude/` alone runs only `typos`. `.github/in-image.sh <command>` runs any command in the image the same way.
 
 Before a release, work through [`docs/release-checklist.md`](docs/release-checklist.md).
 

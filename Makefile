@@ -6,12 +6,13 @@ SOURCES := $(wildcard src/*.js src/metadata.json) $(ICONS)
 EXTRA_SOURCES := $(filter-out src/extension.js,$(wildcard src/*.js))
 UNIT_TESTS := $(wildcard tests/unit/*.test.js)
 INSTALL_DIR := $(or $(XDG_DATA_HOME),$(HOME)/.local/share)/gnome-shell/extensions/$(UUID)
-SH_FILES := $(wildcard scripts/*.sh tests/*/*.sh)
+SH_FILES := $(wildcard scripts/*.sh tests/*/*.sh .github/*.sh)
 PY_FILES := $(wildcard scripts/*.py tests/*/*.py)
 NODE_BIN := node_modules/.bin
+CI_IMAGE := battery-charging-ci:latest
 
 .PHONY: test test-integration screenshots pack pot install uninstall check-deps \
-	lint lint-js lint-sh lint-py format typos
+	lint lint-js lint-sh lint-py lint-actions format typos ci ci-image ci-docker
 
 ## Run the unit tests.
 test:
@@ -53,7 +54,7 @@ uninstall:
 	gnome-extensions uninstall $(UUID) 2>/dev/null || rm -rf "$(INSTALL_DIR)"
 
 ## Run every linter and the spell check; fails on any finding. `make -k lint` reports them all.
-lint: lint-js lint-sh lint-py typos
+lint: lint-js lint-sh lint-py lint-actions typos
 
 ## ESLint and Prettier on the JavaScript.
 lint-js: node_modules
@@ -70,6 +71,10 @@ lint-py:
 	ruff check $(PY_FILES)
 	ruff format --check $(PY_FILES)
 
+## actionlint on the GitHub Actions workflows (and shellcheck on their scripts).
+lint-actions:
+	actionlint
+
 ## Rewrite the JavaScript, shell and Python files in place to their formatters' style.
 format: node_modules
 	$(NODE_BIN)/prettier --write '**/*.js'
@@ -79,6 +84,20 @@ format: node_modules
 ## Spell-check the repo (project words live in _typos.toml).
 typos:
 	typos
+
+## Run every check CI runs, in order. CI_SKIP_INTEGRATION=1 skips the integration tests.
+# .github/workflows/ci.yml runs these same targets, each as a step of its own;
+# change the list here and the workflow's steps together.
+ci: lint-js lint-sh lint-py lint-actions typos test pack $(if $(CI_SKIP_INTEGRATION),,test-integration)
+
+## Build the CI image (.github/Dockerfile) as $(CI_IMAGE).
+ci-image:
+	docker build -t $(CI_IMAGE) -f .github/Dockerfile .github
+
+## Build the CI image, then run `make ci` in it, as CI does: without the integration tests.
+# The headless shell doesn't run in the image yet (issue #60).
+ci-docker: ci-image
+	.github/in-image.sh make ci CI_SKIP_INTEGRATION=1
 
 # The pinned Node dev tools (ESLint, Prettier), from package-lock.json.
 node_modules: package.json package-lock.json

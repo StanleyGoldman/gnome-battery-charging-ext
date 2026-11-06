@@ -1,0 +1,141 @@
+# The workflow runs the make targets `make ci` runs, each as a step of its own
+# so the Actions page shows which check failed and how long each took. A green
+# local `make ci-docker` predicts a green run here. The step list below and the
+# `ci` target's prerequisites in the Makefile must stay in sync: a check added
+# to one belongs in the other. Every step runs its make target in the CI image
+# (.github/Dockerfile) through .github/in-image.sh.
+#
+# Linux only. Don't add a job that assumes Windows or macOS.
+#
+# Every job names its runner image, `ubuntu-26.04`, rather than
+# `ubuntu-latest`, so GitHub doesn't move it on its own schedule. The checks
+# run in the CI image, whose Ubuntu ships the GNOME Shell the extension
+# targets; the runner only supplies Docker. Move both together.
+#
+# The last job, `ci`, is the check for the `main` ruleset to require: it passes
+# only when every other job passed or was skipped. Keep its name and the
+# workflow's: renamed, a required check never arrives and every pull request
+# waits on it.
+
+name: ci
+
+# Pull requests, and pushes to `main` so a merge is known green.
+#
+# No `paths` filter here. A workflow that never starts reports no status at
+# all, so a required check would wait forever. Skipping work belongs on the
+# jobs and steps.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels the run on its old head. Every run on
+# `main` finishes, so each merge is known green or red.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  # Whether anything but prose changed: Markdown anywhere, `docs/`, or agent
+  # tooling under `.claude/`. The list names what to skip, not what to build,
+  # so a file type nobody listed builds, and a diff git can't take counts as
+  # code. A manual run has no changed files and skips the filter, so `code` is
+  # empty and everything runs. The workflow decides this, never `make ci`,
+  # which doesn't look at the diff.
+  changes:
+    runs-on: ubuntu-26.04
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      # Full history, for the merge base of a pull request's two ends.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # A pull request's whole diff from its merge base, or a push's commits.
+      - id: filter
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        env:
+          RANGE: >-
+            ${{ github.event_name == 'pull_request'
+              && format('{0}...{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha)
+              || format('{0}..{1}', github.event.before, github.sha) }}
+        run: |
+          code=false
+          while IFS= read -r file; do
+            case "$file" in
+              *.md | docs/* | .claude/*) ;;
+              *) code=true ;;
+            esac
+          done < <(git diff --name-only "$RANGE" || echo "the diff failed")
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+  checks:
+    needs: changes
+    runs-on: ubuntu-26.04
+    env:
+      # Until the integration tests run in CI (issue #60), `make ci` here
+      # skips them; locally it runs them.
+      CI_SKIP_INTEGRATION: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The CI image, as `battery-charging-ci:latest` on the runner's Docker
+      # daemon. Its layers live in the GitHub Actions cache, not a registry:
+      # with nothing changed every layer hits and loading the image is the
+      # only cost, and an evicted layer rebuilds itself. Without the build
+      # summary and record the action adds by default: the step's log already
+      # shows a failing build.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: ci image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          DOCKER_BUILD_SUMMARY: "false"
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
+        with:
+          context: .github
+          file: .github/Dockerfile
+          tags: battery-charging-ci:latest
+          load: true
+          cache-from: type=gha,scope=ci-image
+          cache-to: type=gha,scope=ci-image,mode=max
+
+      # The spell-check reads prose too, so it runs on every change.
+      - name: typos
+        run: .github/in-image.sh make typos
+
+      - name: lint-js
+        if: needs.changes.outputs.code != 'false'
+        run: .github/in-image.sh make lint-js
+      - name: lint-sh
+        if: needs.changes.outputs.code != 'false'
+        run: .github/in-image.sh make lint-sh
+      - name: lint-py
+        if: needs.changes.outputs.code != 'false'
+        run: .github/in-image.sh make lint-py
+      - name: lint-actions
+        if: needs.changes.outputs.code != 'false'
+        run: .github/in-image.sh make lint-actions
+      # Under GitHub Actions the runner also prints a failing test as an
+      # ::error annotation.
+      - name: test
+        if: needs.changes.outputs.code != 'false'
+        run: .github/in-image.sh make test
+      - name: pack
+        if: needs.changes.outputs.code != 'false'
+        run: .github/in-image.sh make pack
+
+  # The required check. A job a prose-only change skips counts as passed.
+  ci:
+    needs: [changes, checks]
+    if: always()
+    runs-on: ubuntu-26.04
+    steps:
+      - name: every job passed or was skipped
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
