@@ -19,3 +19,4 @@ _Avoid_: Limited, conservation mode, on
 **Supporting battery**:
 A laptop battery that powers the machine and whose firmware lets UPower limit its charge. Peripheral batteries (mouse, headset) never are.
 _Avoid_: Battery (when the distinction matters), device
+
