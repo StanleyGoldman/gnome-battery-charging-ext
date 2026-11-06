@@ -1,0 +1,12 @@
+{
+  "name": "gnome-battery-charging-ext",
+  "private": true,
+  "type": "module",
+  "description": "Development tools only: the extension has no runtime dependencies.",
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.14.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.9.10"
+  }
+}

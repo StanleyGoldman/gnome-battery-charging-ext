@@ -6,8 +6,13 @@ SOURCES := $(wildcard src/*.js src/metadata.json) $(ICONS)
 EXTRA_SOURCES := $(filter-out src/extension.js,$(wildcard src/*.js))
 UNIT_TESTS := $(wildcard tests/unit/*.test.js)
 INSTALL_DIR := $(or $(XDG_DATA_HOME),$(HOME)/.local/share)/gnome-shell/extensions/$(UUID)
+JS_FILES := $(wildcard *.js src/*.js scripts/*.js tests/*/*.js)
+SH_FILES := $(wildcard scripts/*.sh tests/*/*.sh)
+PY_FILES := $(wildcard scripts/*.py tests/*/*.py)
+NODE_BIN := node_modules/.bin
 
-.PHONY: test test-integration screenshots pack pot install uninstall check-deps
+.PHONY: test test-integration screenshots pack pot install uninstall check-deps \
+	lint lint-js lint-sh lint-py format typos
 
 ## Run the unit tests.
 test:
@@ -47,6 +52,36 @@ install: $(ZIP)
 ## so fall back to deleting its directory.
 uninstall:
 	gnome-extensions uninstall $(UUID) 2>/dev/null || rm -rf "$(INSTALL_DIR)"
+
+## Run every linter and the spell check; fails on any finding. `make -k lint` reports them all.
+lint: lint-js lint-sh lint-py typos
+
+lint-js: node_modules
+	$(NODE_BIN)/eslint --max-warnings 0 .
+	$(NODE_BIN)/prettier --check $(JS_FILES)
+
+lint-sh:
+	shellcheck $(SH_FILES)
+	shfmt --diff $(SH_FILES)
+
+lint-py:
+	ruff check $(PY_FILES)
+	ruff format --check $(PY_FILES)
+
+## Rewrite the JavaScript, shell and Python files in place to their formatters' style.
+format: node_modules
+	$(NODE_BIN)/prettier --write $(JS_FILES)
+	shfmt --write $(SH_FILES)
+	ruff format $(PY_FILES)
+
+## Spell-check the repo (project words live in _typos.toml).
+typos:
+	typos
+
+# The pinned Node dev tools (ESLint, Prettier), from package-lock.json.
+node_modules: package.json package-lock.json
+	npm ci
+	@touch $@
 
 ## List missing tools and the apt line that installs them. Never runs sudo.
 check-deps:
