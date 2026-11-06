@@ -16,11 +16,11 @@ const SHELL_MAJOR = parseInt(PACKAGE_VERSION.split('.')[0]);
 
 const BatteryChargingToggle = GObject.registerClass(
     class BatteryChargingToggle extends QuickMenuToggle {
-        _init(extension, model, strings) {
+        constructor(extension, model, strings) {
             const params = {title: strings.title};
             // 49+ only: an unknown construct property throws on 48.
             if (SHELL_MAJOR >= 49) params.menuButtonAccessibleName = model.accessibleName;
-            super._init(params);
+            super(params);
 
             this._model = model;
             this.preserveIcon = this._icon(extension, 'battery-preserve-health-symbolic.svg');
@@ -68,8 +68,8 @@ const BatteryChargingToggle = GObject.registerClass(
 
 const BatteryChargingIndicator = GObject.registerClass(
     class BatteryChargingIndicator extends SystemIndicator {
-        _init(extension, model, strings) {
-            super._init();
+        constructor(extension, model, strings) {
+            super();
             this._toggle = new BatteryChargingToggle(extension, model, strings);
             this.quickSettingsItems.push(this._toggle);
 
