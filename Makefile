@@ -6,7 +6,6 @@ SOURCES := $(wildcard src/*.js src/metadata.json) $(ICONS)
 EXTRA_SOURCES := $(filter-out src/extension.js,$(wildcard src/*.js))
 UNIT_TESTS := $(wildcard tests/unit/*.test.js)
 INSTALL_DIR := $(or $(XDG_DATA_HOME),$(HOME)/.local/share)/gnome-shell/extensions/$(UUID)
-JS_FILES := $(wildcard *.js src/*.js scripts/*.js tests/*/*.js)
 SH_FILES := $(wildcard scripts/*.sh tests/*/*.sh)
 PY_FILES := $(wildcard scripts/*.py tests/*/*.py)
 NODE_BIN := node_modules/.bin
@@ -56,21 +55,24 @@ uninstall:
 ## Run every linter and the spell check; fails on any finding. `make -k lint` reports them all.
 lint: lint-js lint-sh lint-py typos
 
+## ESLint and Prettier on the JavaScript.
 lint-js: node_modules
 	$(NODE_BIN)/eslint --max-warnings 0 .
-	$(NODE_BIN)/prettier --check $(JS_FILES)
+	$(NODE_BIN)/prettier --check '**/*.js'
 
+## shellcheck and shfmt on the shell scripts.
 lint-sh:
 	shellcheck $(SH_FILES)
 	shfmt --diff $(SH_FILES)
 
+## ruff on the Python.
 lint-py:
 	ruff check $(PY_FILES)
 	ruff format --check $(PY_FILES)
 
 ## Rewrite the JavaScript, shell and Python files in place to their formatters' style.
 format: node_modules
-	$(NODE_BIN)/prettier --write $(JS_FILES)
+	$(NODE_BIN)/prettier --write '**/*.js'
 	shfmt --write $(SH_FILES)
 	ruff format $(PY_FILES)
 
