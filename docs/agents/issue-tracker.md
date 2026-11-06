@@ -19,6 +19,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
   - a new issue for a follow-up no open issue holds. **Ask the user before creating it.** Its first line links the PR. Attach it to the parent as a sub-issue, and add a blocker edge to each issue that waits on it, as in **Parent split work**.
 
   Finish with a PR comment listing where each follow-up went.
+- **Assign while working**: when you start implementing an issue, `gh issue edit <n> --add-assignee @me` to signal it is underway; once your work is handed off (e.g. the PR is open), `--remove-assignee @me`. Same for a PR you pick up for more work (merge conflicts, rebase, CI fixes): `gh pr edit <n> --add-assignee @me`, then `--remove-assignee @me` when done.
 - **Close by hand**: `gh issue close <number> --comment "..."`, for an issue resolved without a PR (e.g. by an answering comment).
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
