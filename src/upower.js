@@ -43,22 +43,26 @@ const WRAPPERS = {upower: UPowerProxy, device: DeviceProxy, displayDevice: Displ
 // The seam under the client's proxy creation: kind is 'upower', 'device' or 'displayDevice'.
 // The unit tests pass their own to resolve proxies by hand.
 function dbusProxyFactory(bus) {
-    return (kind, path, cancellable) => new Promise((resolve, reject) => {
-        const flags = kind === 'upower'
-            ? Gio.DBusProxyFlags.DO_NOT_LOAD_PROPERTIES : Gio.DBusProxyFlags.NONE;
-        new WRAPPERS[kind](bus, NAME, path, (proxy, error) => {
-            if (error)
-                reject(error);
-            else
-                resolve(proxy);
-        }, cancellable, flags);
-    });
+    return (kind, path, cancellable) =>
+        new Promise((resolve, reject) => {
+            const flags = kind === 'upower' ? Gio.DBusProxyFlags.DO_NOT_LOAD_PROPERTIES : Gio.DBusProxyFlags.NONE;
+            new WRAPPERS[kind](
+                bus,
+                NAME,
+                path,
+                (proxy, error) => {
+                    if (error) reject(error);
+                    else resolve(proxy);
+                },
+                cancellable,
+                flags
+            );
+        });
 }
 
 export class UPowerClient {
     constructor({newProxy, warn = msg => console.warn(msg)} = {}) {
-        const bus = GLib.getenv('BATTERY_CHARGING_UPOWER_BUS') === 'session'
-            ? Gio.DBus.session : Gio.DBus.system;
+        const bus = GLib.getenv('BATTERY_CHARGING_UPOWER_BUS') === 'session' ? Gio.DBus.session : Gio.DBus.system;
         this._newProxy = newProxy ?? dbusProxyFactory(bus);
         this._warn = warn;
         this._cancellable = new Gio.Cancellable();
@@ -70,21 +74,22 @@ export class UPowerClient {
         this._proxyIds = [];
         this._ownerChangedId = 0;
 
-        this._newProxy('upower', PATH, this._cancellable).then(proxy => {
-            if (this._cancellable.is_cancelled())
-                return;
-            this._proxy = proxy;
-            this._proxyIds = [
-                proxy.connectSignal('DeviceAdded', (_p, _s, [path]) => this._addDevice(path)),
-                proxy.connectSignal('DeviceRemoved', (_p, _s, [path]) => this._removeDevice(path)),
-            ];
-            this._ownerChangedId = proxy.connect('notify::g-name-owner', () => this._onOwnerChanged());
-            if (this.running)
-                this._emit('appeared');
-        }, error => {
-            if (!this._cancellable.is_cancelled())
-                this._warn(`Battery Charging: UPower proxy failed: ${error.message}`);
-        });
+        this._newProxy('upower', PATH, this._cancellable).then(
+            proxy => {
+                if (this._cancellable.is_cancelled()) return;
+                this._proxy = proxy;
+                this._proxyIds = [
+                    proxy.connectSignal('DeviceAdded', (_p, _s, [path]) => this._addDevice(path)),
+                    proxy.connectSignal('DeviceRemoved', (_p, _s, [path]) => this._removeDevice(path)),
+                ];
+                this._ownerChangedId = proxy.connect('notify::g-name-owner', () => this._onOwnerChanged());
+                if (this.running) this._emit('appeared');
+            },
+            error => {
+                if (!this._cancellable.is_cancelled())
+                    this._warn(`Battery Charging: UPower proxy failed: ${error.message}`);
+            }
+        );
     }
 
     get running() {
@@ -92,19 +97,16 @@ export class UPowerClient {
     }
 
     async enumerate() {
-        if (!this._proxy)
-            throw new Error('UPower client is not ready');
+        if (!this._proxy) throw new Error('UPower client is not ready');
         const [paths] = await this._proxy.EnumerateDevicesAsync();
-        const displayDevice = await this._newProxy('displayDevice',
-            DISPLAY_DEVICE_PATH, this._cancellable);
+        const displayDevice = await this._newProxy('displayDevice', DISPLAY_DEVICE_PATH, this._cancellable);
         const displayDeviceType = displayDevice.Type;
         const devices = [];
         for (const path of paths) {
             try {
                 // eslint-disable-next-line no-await-in-loop
                 const entry = await this._deviceFor(path);
-                if (entry)
-                    devices.push(entry.device);
+                if (entry) devices.push(entry.device);
             } catch (e) {
                 this._warn(`Battery Charging: could not read ${path}: ${e.message}`);
             }
@@ -114,8 +116,7 @@ export class UPowerClient {
 
     setChargeThreshold(path, enabled) {
         const entry = this._devices.get(path);
-        if (!entry)
-            return Promise.reject(new Error(`${path} is gone`));
+        if (!entry) return Promise.reject(new Error(`${path} is gone`));
         return entry.proxy.EnableChargeThresholdAsync(enabled);
     }
 
@@ -135,16 +136,14 @@ export class UPowerClient {
         this._dropDevices();
         this._proxyIds.forEach(id => this._proxy.disconnectSignal(id));
         this._proxyIds = [];
-        if (this._ownerChangedId)
-            this._proxy.disconnect(this._ownerChangedId);
+        if (this._ownerChangedId) this._proxy.disconnect(this._ownerChangedId);
         this._ownerChangedId = 0;
         this._proxy = null;
     }
 
     _emit(signal, ...args) {
         for (const handler of [...this._handlers.values()]) {
-            if (handler.signal === signal)
-                handler.callback(...args);
+            if (handler.signal === signal) handler.callback(...args);
         }
     }
 
@@ -154,36 +153,47 @@ export class UPowerClient {
     }
 
     _dropDevices() {
-        for (const {proxy, changedId} of this._devices.values())
-            proxy.disconnect(changedId);
+        for (const {proxy, changedId} of this._devices.values()) proxy.disconnect(changedId);
         this._devices.clear();
     }
 
     // The tracked device for a path, creating its proxy first if needed.
     async _deviceFor(path) {
         const known = this._devices.get(path);
-        if (known)
-            return known;
+        if (known) return known;
         const owner = this._proxy.g_name_owner;
         const removals = this._removals.get(path);
         const proxy = await this._newProxy('device', path, this._cancellable);
         // Removed, or UPower restarted, while the proxy was loading.
-        if (this._cancellable.is_cancelled() || this._proxy.g_name_owner !== owner ||
-            this._removals.get(path) !== removals)
+        if (
+            this._cancellable.is_cancelled() ||
+            this._proxy.g_name_owner !== owner ||
+            this._removals.get(path) !== removals
+        )
             return null;
-        if (this._devices.has(path))
-            return this._devices.get(path);
+        if (this._devices.has(path)) return this._devices.get(path);
         // The properties are read live from the proxy, which keeps them current.
         const device = {
             path,
-            get nativePath() { return proxy.NativePath; },
-            get type() { return proxy.Type; },
-            get powerSupply() { return proxy.PowerSupply; },
-            get chargeThresholdSupported() { return proxy.ChargeThresholdSupported; },
-            get chargeThresholdEnabled() { return proxy.ChargeThresholdEnabled; },
+            get nativePath() {
+                return proxy.NativePath;
+            },
+            get type() {
+                return proxy.Type;
+            },
+            get powerSupply() {
+                return proxy.PowerSupply;
+            },
+            get chargeThresholdSupported() {
+                return proxy.ChargeThresholdSupported;
+            },
+            get chargeThresholdEnabled() {
+                return proxy.ChargeThresholdEnabled;
+            },
         };
         const changedId = proxy.connect('g-properties-changed', (_p, changed) =>
-            this._emit('device-changed', path, Object.keys(changed.deepUnpack())));
+            this._emit('device-changed', path, Object.keys(changed.deepUnpack()))
+        );
         const entry = {proxy, device, changedId};
         this._devices.set(path, entry);
         return entry;
@@ -192,8 +202,7 @@ export class UPowerClient {
     async _addDevice(path) {
         try {
             const entry = await this._deviceFor(path);
-            if (entry)
-                this._emit('device-added', entry.device);
+            if (entry) this._emit('device-added', entry.device);
         } catch (e) {
             this._warn(`Battery Charging: could not read ${path}: ${e.message}`);
         }

@@ -36,8 +36,7 @@ function mockLog() {
 
 async function waitFor(what, condition, timeoutMs = 8000) {
     for (let waited = 0; waited < timeoutMs; waited += 100) {
-        if (condition())
-            return;
+        if (condition()) return;
         // eslint-disable-next-line no-await-in-loop
         await Scripting.sleep(100);
     }
@@ -45,13 +44,15 @@ async function waitFor(what, condition, timeoutMs = 8000) {
 }
 
 function findToggle() {
-    return Main.panel.statusArea.quickSettings.menu._grid.get_children()
+    return Main.panel.statusArea.quickSettings.menu._grid
+        .get_children()
         .find(c => c.constructor.name === 'BatteryChargingToggle');
 }
 
 // The top-bar icon exists on 50+ only; null when the toggle is gone.
 function topBarIcon() {
-    const indicator = Main.panel.statusArea.quickSettings._indicators.get_children()
+    const indicator = Main.panel.statusArea.quickSettings._indicators
+        .get_children()
         .find(c => c.constructor.name === 'BatteryChargingIndicator');
     return indicator?.get_children()[0] ?? null;
 }
@@ -67,21 +68,18 @@ function iconName(gicon) {
 }
 
 function assert(condition, message) {
-    if (!condition)
-        throw new Error(message);
+    if (!condition) throw new Error(message);
 }
 
 function assertToggle(toggle, {visible, checked}) {
     const subtitle = checked ? 'Preserve' : 'Maximize';
     const mode = checked ? 'Preserve Battery Health' : 'Maximize Charge';
     assert(toggle.visible === visible, `visible is ${toggle.visible}, expected ${visible}`);
-    if (!visible)
-        return;
+    if (!visible) return;
     assert(toggle.checked === checked, `checked is ${toggle.checked}, expected ${checked}`);
     assert(toggle.subtitle === subtitle, `subtitle is "${toggle.subtitle}", expected "${subtitle}"`);
     assert(toggle.title === 'Battery', `title is "${toggle.title}"`);
-    assert(toggle.accessible_name === `Battery Charging: ${mode}`,
-        `accessible name is "${toggle.accessible_name}"`);
+    assert(toggle.accessible_name === `Battery Charging: ${mode}`, `accessible name is "${toggle.accessible_name}"`);
     const ticked = checked ? toggle.preserveItem : toggle.maximizeItem;
     const unticked = checked ? toggle.maximizeItem : toggle.preserveItem;
     assert(ticked._ornament === PopupMenu.Ornament.CHECK, 'the current mode is not ticked');
@@ -90,13 +88,14 @@ function assertToggle(toggle, {visible, checked}) {
 
 function assertTopBar(shown) {
     const icon = topBarIcon();
-    if (parseInt(PACKAGE_VERSION) < 50)
-        return;
+    if (parseInt(PACKAGE_VERSION) < 50) return;
     assert(icon !== null, 'no top-bar icon');
     assert(icon.visible === shown, `top-bar icon visible is ${icon.visible}, expected ${shown}`);
     if (shown)
-        assert(iconName(icon.gicon) === 'battery-preserve-health-symbolic.svg',
-            `top-bar icon is ${iconName(icon.gicon)}`);
+        assert(
+            iconName(icon.gicon) === 'battery-preserve-health-symbolic.svg',
+            `top-bar icon is ${iconName(icon.gicon)}`
+        );
 }
 
 async function screenshot(name) {
@@ -115,87 +114,117 @@ function resetMock() {
 }
 
 const ENGLISH_TESTS = [
-    ['1 appears and shows state', async () => {
-        await waitFor('the toggle', () => findToggle()?.visible);
-        const toggle = findToggle();
-        assertToggle(toggle, {visible: true, checked: true});
-        assertTopBar(true);
-    }],
-    ['2 a click switches', async () => {
-        const toggle = findToggle();
-        const before = mockLog().length;
-        toggle.emit('clicked', 1);
-        await waitFor('EnableChargeThreshold(false)', () =>
-            mockLog().slice(before).includes('EnableChargeThreshold(false) on BAT0'));
-        await waitFor('the toggle to follow', () => !toggle.checked);
-        assertToggle(toggle, {visible: true, checked: false});
-        assertTopBar(false);
+    [
+        '1 appears and shows state',
+        async () => {
+            await waitFor('the toggle', () => findToggle()?.visible);
+            const toggle = findToggle();
+            assertToggle(toggle, {visible: true, checked: true});
+            assertTopBar(true);
+        },
+    ],
+    [
+        '2 a click switches',
+        async () => {
+            const toggle = findToggle();
+            const before = mockLog().length;
+            toggle.emit('clicked', 1);
+            await waitFor('EnableChargeThreshold(false)', () =>
+                mockLog().slice(before).includes('EnableChargeThreshold(false) on BAT0')
+            );
+            await waitFor('the toggle to follow', () => !toggle.checked);
+            assertToggle(toggle, {visible: true, checked: false});
+            assertTopBar(false);
 
-        toggle.preserveItem.emit('activate', null);
-        await waitFor('the toggle to follow', () => toggle.checked);
-        assertToggle(toggle, {visible: true, checked: true});
-    }],
-    ['3 an external change is followed', async () => {
-        const toggle = findToggle();
-        mock('disable BAT0');
-        await waitFor('the toggle to follow', () => !toggle.checked);
-        assertToggle(toggle, {visible: true, checked: false});
-        assertTopBar(false);
-        mock('enable BAT0');
-        await waitFor('the toggle to follow', () => toggle.checked);
-        assertToggle(toggle, {visible: true, checked: true});
-        assertTopBar(true);
-    }],
-    ['4 a refused switch snaps back and notifies', async () => {
-        const toggle = findToggle();
-        mock('fail BAT0');
-        toggle.emit('clicked', 1);
-        await waitFor('the notification', () => Main.messageTray.getSources().some(src =>
-            src.notifications.some(n => n.title === 'Could not change Battery Charging' &&
-                n.body === 'Switching to Maximize Charge is not allowed.')));
-        assertToggle(toggle, {visible: true, checked: true});
-        mock('ok BAT0');
-    }],
-    ['5 UPower goes away and returns', async () => {
-        const toggle = findToggle();
-        mock('vanish');
-        await waitFor('the toggle to hide', () => !toggle.visible);
-        assertTopBar(false);
-        // Changed while UPower is away: the toggle has to read it again on return.
-        mock('disable BAT0');
-        mock('return');
-        await waitFor('the toggle to return', () => toggle.visible);
-        await waitFor('the new state', () => !toggle.checked);
-        assertToggle(toggle, {visible: true, checked: false});
-        mock('enable BAT0');
-        await waitFor('the toggle to follow', () => toggle.checked);
-    }],
-    ['6 disable and re-enable', async () => {
-        const manager = Main.extensionManager;
-        manager.disableExtension(UUID);
-        await waitFor('the toggle to go', () => findToggle() === undefined);
-        manager.enableExtension(UUID);
-        await waitFor('the toggle to return', () => findToggle()?.visible);
-        assertToggle(findToggle(), {visible: true, checked: true});
-        // Let late D-Bus replies hit a disposed object, if any would; run.sh then
-        // checks the log for Gjs-CRITICAL lines.
-        manager.disableExtension(UUID);
-        mock('disable BAT0');
-        mock('enable BAT0');
-        await Scripting.sleep(1000);
-        manager.enableExtension(UUID);
-        await waitFor('the toggle to return', () => findToggle()?.visible);
-    }],
+            toggle.preserveItem.emit('activate', null);
+            await waitFor('the toggle to follow', () => toggle.checked);
+            assertToggle(toggle, {visible: true, checked: true});
+        },
+    ],
+    [
+        '3 an external change is followed',
+        async () => {
+            const toggle = findToggle();
+            mock('disable BAT0');
+            await waitFor('the toggle to follow', () => !toggle.checked);
+            assertToggle(toggle, {visible: true, checked: false});
+            assertTopBar(false);
+            mock('enable BAT0');
+            await waitFor('the toggle to follow', () => toggle.checked);
+            assertToggle(toggle, {visible: true, checked: true});
+            assertTopBar(true);
+        },
+    ],
+    [
+        '4 a refused switch snaps back and notifies',
+        async () => {
+            const toggle = findToggle();
+            mock('fail BAT0');
+            toggle.emit('clicked', 1);
+            await waitFor('the notification', () =>
+                Main.messageTray
+                    .getSources()
+                    .some(src =>
+                        src.notifications.some(
+                            n =>
+                                n.title === 'Could not change Battery Charging' &&
+                                n.body === 'Switching to Maximize Charge is not allowed.'
+                        )
+                    )
+            );
+            assertToggle(toggle, {visible: true, checked: true});
+            mock('ok BAT0');
+        },
+    ],
+    [
+        '5 UPower goes away and returns',
+        async () => {
+            const toggle = findToggle();
+            mock('vanish');
+            await waitFor('the toggle to hide', () => !toggle.visible);
+            assertTopBar(false);
+            // Changed while UPower is away: the toggle has to read it again on return.
+            mock('disable BAT0');
+            mock('return');
+            await waitFor('the toggle to return', () => toggle.visible);
+            await waitFor('the new state', () => !toggle.checked);
+            assertToggle(toggle, {visible: true, checked: false});
+            mock('enable BAT0');
+            await waitFor('the toggle to follow', () => toggle.checked);
+        },
+    ],
+    [
+        '6 disable and re-enable',
+        async () => {
+            const manager = Main.extensionManager;
+            manager.disableExtension(UUID);
+            await waitFor('the toggle to go', () => findToggle() === undefined);
+            manager.enableExtension(UUID);
+            await waitFor('the toggle to return', () => findToggle()?.visible);
+            assertToggle(findToggle(), {visible: true, checked: true});
+            // Let late D-Bus replies hit a disposed object, if any would; run.sh then
+            // checks the log for Gjs-CRITICAL lines.
+            manager.disableExtension(UUID);
+            mock('disable BAT0');
+            mock('enable BAT0');
+            await Scripting.sleep(1000);
+            manager.enableExtension(UUID);
+            await waitFor('the toggle to return', () => findToggle()?.visible);
+        },
+    ],
 ];
 
 // Needs the German GNOME language pack (make check-deps).
 const GERMAN_TESTS = [
-    ['7 translations', async () => {
-        await waitFor('the toggle', () => findToggle()?.visible);
-        // setHeader() has no getter, so read the labels the menu shows.
-        const texts = menuTexts(findToggle().menu.actor);
-        assert(texts.includes('Batterieladung'), `menu header is not "Batterieladung": ${JSON.stringify(texts)}`);
-    }],
+    [
+        '7 translations',
+        async () => {
+            await waitFor('the toggle', () => findToggle()?.visible);
+            // setHeader() has no getter, so read the labels the menu shows.
+            const texts = menuTexts(findToggle().menu.actor);
+            assert(texts.includes('Batterieladung'), `menu header is not "Batterieladung": ${JSON.stringify(texts)}`);
+        },
+    ],
 ];
 
 const TESTS = PASS === 'german' ? GERMAN_TESTS : ENGLISH_TESTS;
@@ -232,9 +261,7 @@ function startOnce() {
         // The test tool reads these keys after the shell exits; without them it
         // crashes and leaves a report in /var/crash.
         const perfOutput = GLib.getenv('SHELL_PERF_OUTPUT');
-        if (perfOutput)
-            GLib.file_set_contents(perfOutput,
-                '{"events": [], "monitors": [], "metrics": [], "log": []}');
+        if (perfOutput) GLib.file_set_contents(perfOutput, '{"events": [], "monitors": [], "metrics": [], "log": []}');
         global.context.terminate();
     })();
     return started;

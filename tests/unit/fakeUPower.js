@@ -46,19 +46,16 @@ export class FakeUPower {
             displayDeviceType: this.displayDeviceType,
             devices: [...this.devices],
         };
-        if (!this.holdEnumerate)
-            return Promise.resolve(result);
+        if (!this.holdEnumerate) return Promise.resolve(result);
         return new Promise(resolve => this._heldEnumerations.push(() => resolve(result)));
     }
 
     setChargeThreshold(path, enabled) {
         this.setCalls.push([path, enabled]);
         const refuse = this.failSets.has(path);
-        const settle = (resolve, reject) => refuse
-            ? reject(new Error('GDBus.Error:org.freedesktop.DBus.Error.AccessDenied'))
-            : resolve();
-        if (!this.holdSets)
-            return new Promise(settle);
+        const settle = (resolve, reject) =>
+            refuse ? reject(new Error('GDBus.Error:org.freedesktop.DBus.Error.AccessDenied')) : resolve();
+        if (!this.holdSets) return new Promise(settle);
         return new Promise((resolve, reject) => this._heldSets.push({path, run: () => settle(resolve, reject)}));
     }
 
@@ -80,8 +77,7 @@ export class FakeUPower {
 
     _emit(signal, ...args) {
         for (const handler of [...this._handlers.values()]) {
-            if (handler.signal === signal)
-                handler.callback(...args);
+            if (handler.signal === signal) handler.callback(...args);
         }
     }
 

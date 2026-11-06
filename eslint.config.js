@@ -56,7 +56,10 @@ export default [
             'no-unmodified-loop-condition': 'error',
             'no-unreachable-loop': 'error',
             'no-unused-private-class-members': 'error',
-            'no-use-before-define': ['error', {functions: false, classes: true, variables: true, allowNamedExports: true}],
+            'no-use-before-define': [
+                'error',
+                {functions: false, classes: true, variables: true, allowNamedExports: true},
+            ],
             // See: https://eslint.org/docs/latest/rules/#suggestions
             'block-scoped-var': 'error',
             'complexity': 'warn',

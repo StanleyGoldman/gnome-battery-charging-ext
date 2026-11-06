@@ -18,8 +18,7 @@ export const METRICS = {};
 
 async function waitFor(what, condition, timeoutMs = 8000) {
     for (let waited = 0; waited < timeoutMs; waited += 100) {
-        if (condition())
-            return;
+        if (condition()) return;
         // eslint-disable-next-line no-await-in-loop
         await Scripting.sleep(100);
     }
@@ -27,7 +26,8 @@ async function waitFor(what, condition, timeoutMs = 8000) {
 }
 
 function findToggle() {
-    return Main.panel.statusArea.quickSettings.menu._grid.get_children()
+    return Main.panel.statusArea.quickSettings.menu._grid
+        .get_children()
         .find(c => c.constructor.name === 'BatteryChargingToggle');
 }
 
@@ -45,8 +45,7 @@ async function shoot(name, actors) {
     x2 = Math.min(global.stage.width, Math.ceil(x2 + MARGIN));
     y2 = Math.min(global.stage.height, Math.ceil(y2 + MARGIN));
 
-    const stream = Gio.File.new_for_path(`${OUT}/${name}.png`)
-        .replace(null, false, Gio.FileCreateFlags.NONE, null);
+    const stream = Gio.File.new_for_path(`${OUT}/${name}.png`).replace(null, false, Gio.FileCreateFlags.NONE, null);
     await new Shell.Screenshot().screenshot_area(x1, y1, x2 - x1, y2 - y1, stream);
     stream.close(null);
     console.log(`SCREENSHOT ${name}.png`);
@@ -56,8 +55,7 @@ async function takeScreenshots() {
     const quickSettings = Main.panel.statusArea.quickSettings;
     // NetworkManager is on the system bus, so the Wi-Fi tile would show the real network name.
     for (const item of quickSettings.menu._grid.get_children()) {
-        if (item.constructor.name.startsWith('NM'))
-            item.hide();
+        if (item.constructor.name.startsWith('NM')) item.hide();
     }
     await waitFor('the toggle', () => findToggle()?.visible && findToggle().checked);
     const toggle = findToggle();
@@ -94,9 +92,7 @@ function startOnce() {
         // The test tool reads these keys after the shell exits; without them it
         // crashes and leaves a report in /var/crash.
         const perfOutput = GLib.getenv('SHELL_PERF_OUTPUT');
-        if (perfOutput)
-            GLib.file_set_contents(perfOutput,
-                '{"events": [], "monitors": [], "metrics": [], "log": []}');
+        if (perfOutput) GLib.file_set_contents(perfOutput, '{"events": [], "monitors": [], "metrics": [], "log": []}');
         global.context.terminate();
     })();
     return started;

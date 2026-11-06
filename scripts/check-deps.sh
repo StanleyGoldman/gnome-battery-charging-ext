@@ -14,8 +14,8 @@ have gnome-extensions || missing+=("gnome-extensions: gnome-shell")
 have xgettext || missing+=("xgettext: gettext")
 python3 -c 'import gi' >/dev/null 2>&1 || missing+=("python3-gi: python3-gi")
 # The integration tests check German strings borrowed from GNOME Settings.
-[[ -e /usr/share/locale-langpack/de/LC_MESSAGES/gnome-control-center-2.0.mo \
-    || -e /usr/share/locale/de/LC_MESSAGES/gnome-control-center-2.0.mo ]] \
+[[ -e /usr/share/locale-langpack/de/LC_MESSAGES/gnome-control-center-2.0.mo ||
+    -e /usr/share/locale/de/LC_MESSAGES/gnome-control-center-2.0.mo ]] \
     || missing+=("German GNOME language pack: language-pack-gnome-de")
 # make lint, format and typos. npm installs ESLint and Prettier into node_modules.
 have npm || missing+=("npm: npm")

@@ -7,7 +7,10 @@ set -euo pipefail
 
 # Headless shells share one Wayland display; queue behind any integration run.
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/battery-charging-integration.lock"
-flock -n 9 || { echo "Waiting for another headless shell to finish..."; flock 9; }
+flock -n 9 || {
+    echo "Waiting for another headless shell to finish..."
+    flock 9
+}
 
 here=$(cd "$(dirname "$0")" && pwd)
 mock=$here/../tests/integration/mock-upower.py
