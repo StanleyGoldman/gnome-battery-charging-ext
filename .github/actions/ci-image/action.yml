@@ -1,0 +1,37 @@
+# Builds the CI image (.github/Dockerfile) and loads it as
+# `battery-charging-ci:latest` on the runner's Docker daemon, where
+# .github/in-image.sh runs it. Every job that needs the image calls this
+# action after its checkout, so the image is built the same way everywhere.
+#
+# The image's layers live in the GitHub Actions cache, not a registry: with
+# nothing changed every layer hits and loading the image is the only cost,
+# and an evicted layer rebuilds itself. Only one job writes the cache
+# (`write-cache: "true"`), so two jobs never race to save the same layers;
+# the others only read it. Without the build summary and record the action
+# adds by default: the step's log already shows a failing build.
+name: ci image
+description: Build the CI image from the GitHub Actions layer cache and load it into Docker.
+
+inputs:
+  write-cache:
+    description: '"true" to also write the layers to the GitHub Actions cache. Exactly one job sets it.'
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+    - name: ci image
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      env:
+        DOCKER_BUILD_SUMMARY: "false"
+        DOCKER_BUILD_RECORD_UPLOAD: "false"
+      with:
+        context: .github
+        file: .github/Dockerfile
+        tags: battery-charging-ci:latest
+        load: true
+        cache-from: type=gha,scope=ci-image
+        # An empty cache-to writes no cache.
+        cache-to: ${{ inputs.write-cache == 'true' && 'type=gha,scope=ci-image,mode=max' || '' }}
