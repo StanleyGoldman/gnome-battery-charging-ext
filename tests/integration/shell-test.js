@@ -1,4 +1,4 @@
-// Integration tests 1 to 7 (docs/spec.md §7), run inside a headless GNOME
+// Integration tests 1 to 7 (docs/spec.md §8), run inside a headless GNOME
 // Shell by tests/integration/run.sh. Tests 1 to 6 run in an English shell, test 7 in a
 // German one ($BATTERY_CHARGING_TEST_PASS says which). The mock UPower is driven through its FIFO
 // ($BATTERY_CHARGING_MOCK_FIFO) and logs to $BATTERY_CHARGING_MOCK_LOG.

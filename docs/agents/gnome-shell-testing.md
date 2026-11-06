@@ -58,6 +58,10 @@ A pass whose bus fails to start leaves no `<pass>.log`, only `grep: ... No such 
 
 Harmless in the container's logs: no Xwayland, colord, AT-SPI bus, GeoClue or backgrounds.
 
+## Locking the screen
+
+`Main.screenShield.lock(false)` locks a headless shell: the session mode becomes `unlock-dialog`, and `Main.screenShield.deactivate(false)` unlocks it. `Main.sessionMode.pushMode('unlock-dialog')` / `popMode` switches the mode alone. On lock, the shell disables every extension whose `metadata.json` lacks `"session-modes": [..., "unlock-dialog"]` and re-enables it on unlock, so a lock test fails if that key goes missing. Read the extension's state with `Main.extensionManager.lookup(uuid).state` (`1` enabled, `2` disabled). Checked on GNOME Shell 50.1 (#74).
+
 ## Mocking UPower
 
 The shell talks to UPower on the system bus, which can't be faked safely. Give the extension a

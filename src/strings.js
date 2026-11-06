@@ -1,7 +1,7 @@
 // Every user-visible string, in one place so the menu and the accessible name can't drift.
 // No GNOME Shell imports, so it runs under plain `gjs -m` for the unit tests.
 //
-// Two kinds (docs/spec.md §5):
+// Two kinds (docs/spec.md §6):
 //   borrowed  looked up in GNOME's own catalogs with dgettext, so the wording matches
 //             GNOME Settings in every language. `make pot` must not extract these.
 //   ours      go through _() / ngettext(), in this extension's own gettext domain.

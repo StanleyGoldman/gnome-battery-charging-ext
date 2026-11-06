@@ -46,7 +46,7 @@ Before running a headless or nested GNOME Shell, or `gnome-shell-test-tool`, rea
 ### Worktrees
 
 - The main checkout in the repo folder belongs to the user; keep its branch as the user left it.
-- Do branch work (practice and doc updates, fixes, PR branches) in a git worktree. A subagent in its own worktree makes such a fix in the background.
+- Do branch work (practice and doc updates, fixes, PR branches) in a git worktree under `.claude/worktrees/<name>` (gitignored): `git worktree add .claude/worktrees/<name> -b <branch> origin/main`. A subagent in its own worktree makes such a fix in the background.
 
 ### Pull requests
 
