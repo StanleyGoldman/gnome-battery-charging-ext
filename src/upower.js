@@ -93,7 +93,7 @@ export class UPowerClient {
     }
 
     get running() {
-        return this._proxy?.g_name_owner != null;
+        return (this._proxy?.g_name_owner ?? null) !== null;
     }
 
     async enumerate() {
