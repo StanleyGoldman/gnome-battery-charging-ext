@@ -22,12 +22,23 @@ mkdir -p "$out"
 
 export BATTERY_CHARGING_TEST_OUT=$out
 
+# The shell opens the system bus at startup and aborts without one, as in a container.
+# There, give each pass an empty private bus as its system bus: an outer
+# dbus-run-session, whose address becomes DBUS_SYSTEM_BUS_ADDRESS before the inner one
+# replaces the session address. Nothing owns a name on it, so the shell's calls to
+# logind and the rest fail softly. With a real system bus, the prefix is empty.
+system_bus=()
+if [[ -z ${DBUS_SYSTEM_BUS_ADDRESS:-} && ! -S /run/dbus/system_bus_socket ]]; then
+    # shellcheck disable=SC2016 # Expanded by the outer bus's shell.
+    system_bus=(dbus-run-session -- bash -c 'DBUS_SYSTEM_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS exec "$@"' _)
+fi
+
 # One shell per pass: the language is fixed when the shell starts.
 #   run_pass NAME LANGUAGE   logs to OUT/NAME.log
 run_pass() {
     local name=$1 language=$2
     # shellcheck disable=SC2016 # The inner script expands its own variables, from its arguments.
-    timeout 180 dbus-run-session -- bash -c '
+    timeout 180 "${system_bus[@]}" dbus-run-session -- bash -c '
         here=$1 zip=$2 out=$3 name=$4 language=$5
         mkfifo "$out/$name.fifo"
         python3 -u "$here/mock-upower.py" --fifo "$out/$name.fifo" BAT0:enabled > "$out/$name-mock.log" 2>&1 &

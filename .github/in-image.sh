@@ -16,14 +16,19 @@
 # (dist/, node_modules/) stays the caller's. That user has no home in the
 # image, so HOME is a scratch directory there.
 #
+# The headless GNOME Shell (make test-integration) needs XDG_RUNTIME_DIR for its
+# Wayland socket, so the container gets a private one, as a login would.
+#
 # The variables in `passed` below reach the container when set here.
 #
 # Exit status: the command's.
 set -euo pipefail
 
-passed=(CI GITHUB_ACTIONS CI_SKIP_INTEGRATION)
+passed=(CI GITHUB_ACTIONS)
 
-args=(--rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" -e HOME=/tmp)
+uid=$(id -u) gid=$(id -g)
+args=(--rm -v "$PWD:/work" -w /work --user "$uid:$gid" -e HOME=/tmp
+    --tmpfs "/run/user/$uid:mode=0700,uid=$uid,gid=$gid" -e XDG_RUNTIME_DIR="/run/user/$uid")
 for name in "${passed[@]}"; do
     args+=(-e "$name")
 done

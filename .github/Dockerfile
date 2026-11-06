@@ -24,6 +24,11 @@ RUN apt-get update -qq && \
       lcov make nodejs npm python3-gi shellcheck shfmt && \
     rm -rf /var/lib/apt/lists/*
 
+# tests/integration/run.sh runs the shell under LANG=en_US.UTF-8, since
+# LANGUAGE only switches languages under a generated non-C locale. The German
+# language pack generates only the de_* locales.
+RUN locale-gen en_US.UTF-8
+
 # The tools apt doesn't carry, or carries at another version, as pinned
 # prebuilt binaries: an image rebuild never changes them behind our back. Bump
 # a version here to move it.

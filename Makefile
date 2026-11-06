@@ -106,21 +106,20 @@ format: node_modules
 typos:
 	typos
 
-## Run every check CI runs, in order. CI_SKIP_INTEGRATION=1 skips the integration tests.
+## Run every check CI runs, in order.
 # .github/workflows/ci.yml runs these same targets, each as a step of its own;
 # change the list here and the workflow's steps together. The workflow runs typos
-# first, and has no test-integration step until issue #60. `ci` runs the unit tests
+# first, and test-integration in a job of its own. `ci` runs the unit tests
 # through `coverage`, which also fails on a failing test.
-ci: lint-js lint-sh lint-py lint-actions typos coverage pack $(if $(CI_SKIP_INTEGRATION),,test-integration)
+ci: lint-js lint-sh lint-py lint-actions typos coverage pack test-integration
 
 ## Build the CI image (.github/Dockerfile) as $(CI_IMAGE).
 ci-image:
 	docker build -t $(CI_IMAGE) -f .github/Dockerfile .github
 
-## Build the CI image, then run `make ci` in it, as CI does: without the integration tests.
-# The headless shell doesn't run in the image yet (issue #60).
+## Build the CI image, then run `make ci` in it, as CI does.
 ci-docker: ci-image
-	.github/in-image.sh make ci CI_SKIP_INTEGRATION=1
+	.github/in-image.sh make ci
 
 # The pinned Node dev tools (ESLint, Prettier), from package-lock.json.
 node_modules: package.json package-lock.json

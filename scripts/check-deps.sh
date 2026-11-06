@@ -19,6 +19,9 @@ have dbus-run-session || missing+=("dbus-run-session: dbus")
 [[ -e /usr/share/locale-langpack/de/LC_MESSAGES/gnome-control-center-2.0.mo ||
     -e /usr/share/locale/de/LC_MESSAGES/gnome-control-center-2.0.mo ]] \
     || missing+=("German GNOME language pack: language-pack-gnome-de")
+# The integration tests run under LANG=en_US.UTF-8, which LANGUAGE=de needs.
+locale -a 2>/dev/null | grep -qix 'en_US\.utf-\?8' \
+    || others+=("en_US.UTF-8 locale: sudo locale-gen en_US.UTF-8")
 # make lint, format and typos. npm installs ESLint and Prettier into node_modules.
 have npm || missing+=("npm: npm")
 have shellcheck || missing+=("shellcheck: shellcheck")
