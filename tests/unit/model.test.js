@@ -480,7 +480,3 @@ test('the toggle text comes from the injected translations', async () => {
     assertEqual(model.subtitle, 'Maximal', 'subtitle');
     assertEqual(model.accessibleName, 'Batterieladung: Maximal laden', 'accessible name');
 });
-
-test('DELIBERATE FAILURE: checks the CI annotation (reverted)', () => {
-    assertEqual(1, 2, 'deliberate');
-});
