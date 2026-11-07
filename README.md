@@ -21,11 +21,11 @@ It needs UPower 1.90.6 or later and a supporting battery. `src/metadata.json` li
 
 ## The Full-battery action
 
-Charging to full and staying there wears a battery. The Full-battery action acts once the battery has been **Full** for a set wait: in Maximize Charge, charged to 100 %, on every supporting battery.
+Charging to full and staying there wears a battery. The Full-battery action acts once the battery has been **Full** for a set wait: every supporting battery has finished charging to the top in Maximize Charge.
 
 - **Do Nothing** (the default): nothing happens.
-- **Notify**: a "Battery Fully Charged" notification offers **Preserve Battery Health**, which switches, and **Remind Me Later**. It comes back at the **Remind Every** interval until you switch or dismiss it. Dismissing it ends the reminders until the next full charge.
-- **Switch to Preserve Battery Health**: the extension switches by itself and posts a "Switched to Preserve Battery Health" notification. Switch back from Quick Settings if you need the full charge.
+- **Notify**: a "Battery Fully Charged" notification offers **Preserve Battery Health**, which switches, and **Remind Me Later** (left out when Remind Every is 0). It comes back at the Remind Every interval until you switch, dismiss it, or the battery stops being Full. Dismissing it ends the reminders until the next full charge.
+- **Switch to Preserve Battery Health**: the extension switches by itself and posts a "Switched to Preserve Battery Health" notification. To undo, switch back to Maximize Charge from Quick Settings.
 
 Set it in the extension's preferences window: open it from the Extensions app, or run
 
@@ -35,7 +35,7 @@ gnome-extensions prefs battery-charging@stanleygoldman.github.io
 
 | Setting | Default | Meaning |
 |---|---|---|
-| When Fully Charged | Do Nothing | Do Nothing, Notify or Switch to Preserve Battery Health. |
+| When Fully Charged | Do Nothing | One of the three choices above. |
 | Wait Before Acting | 30 minutes | How long the battery stays Full before the action. 0 acts at once. Time asleep counts. |
 | Remind Every | 60 minutes | Notify only: the time between reminders. 0 notifies once. |
 
