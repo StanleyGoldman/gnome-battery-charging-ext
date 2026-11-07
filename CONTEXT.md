@@ -20,6 +20,10 @@ _Avoid_: Limited, conservation mode, on
 A laptop battery that powers the machine and whose firmware lets UPower limit its charge. Peripheral batteries (mouse, headset) never are.
 _Avoid_: Battery (when the distinction matters), device
 
+**Top-bar icon**:
+The icon the extension shows in the top bar while Preserve Battery Health is on, the way Power Mode shows one for its own mode.
+_Avoid_: Tray icon, notification icon (notifications are the Full-battery action's), status icon
+
 **Full**:
 A supporting battery that has finished charging to the top while in Maximize Charge. The machine is Full when every supporting battery is; with none, it isn't. A battery in Preserve Battery Health is never Full, however charged.
 _Avoid_: Fully charged (UPower's narrower state, which Full includes), charged
