@@ -24,14 +24,22 @@ mkdir -p "$out"
 export BATTERY_CHARGING_TEST_OUT=$out
 
 # The shell opens the system bus at startup and aborts without one, as in a container.
-# There, give each pass an empty private bus as its system bus: an outer
-# dbus-run-session, whose address becomes DBUS_SYSTEM_BUS_ADDRESS before the inner one
-# replaces the session address. Nothing owns a name on it, so the shell's calls to
-# logind and the rest fail softly. With a real system bus, the prefix is empty.
+# There, give each pass a private bus as its system bus: an outer dbus-run-session,
+# whose address becomes DBUS_SYSTEM_BUS_ADDRESS before the inner one replaces the
+# session address. Only mock-gdm.py owns a name on it, so the shell builds its screen
+# shield (test 12 locks); its calls to logind and the rest fail softly. With a real
+# system bus, the prefix is empty.
 system_bus=()
 if [[ -z ${DBUS_SYSTEM_BUS_ADDRESS:-} && ! -S /run/dbus/system_bus_socket ]]; then
     # shellcheck disable=SC2016 # Expanded by the outer bus's shell.
-    system_bus=(dbus-run-session -- bash -c 'DBUS_SYSTEM_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS exec "$@"' _)
+    system_bus=(dbus-run-session -- bash -c '
+        export DBUS_SYSTEM_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS
+        python3 "$0/mock-gdm.py" "$DBUS_SYSTEM_BUS_ADDRESS" &
+        gdm=$!
+        trap "kill $gdm 2>/dev/null || true" EXIT
+        gdbus wait --address "$DBUS_SYSTEM_BUS_ADDRESS" --timeout 10 org.gnome.DisplayManager
+        "$@"
+    ' "$here")
 fi
 
 # One shell per pass: the language is fixed when the shell starts.
