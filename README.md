@@ -23,6 +23,8 @@ It needs UPower 1.90.6 or later and a supporting battery. `src/metadata.json` li
 
 Charging to full and staying there wears a battery. The Full-battery action acts once the battery has been **Full** for a set wait: every supporting battery has finished charging to the top in Maximize Charge.
 
+<img src="docs/screenshots/notification.png" alt="The Battery Fully Charged notification, with Preserve Battery Health and Remind Me Later buttons" width="545">
+
 - **Do Nothing** (the default): nothing happens.
 - **Notify**: a "Battery Fully Charged" notification offers **Preserve Battery Health**, which switches, and **Remind Me Later** (left out when Remind Every is 0). It comes back at the Remind Every interval until you switch, dismiss it, or the battery stops being Full. Dismissing it ends the reminders until the next full charge.
 - **Switch to Preserve Battery Health**: the extension switches by itself and posts a "Switched to Preserve Battery Health" notification. To undo, switch back to Maximize Charge from Quick Settings.
@@ -32,6 +34,8 @@ Set it in the extension's preferences window: open it from the Extensions app, o
 ```sh
 gnome-extensions prefs battery-charging@stanleygoldman.github.io
 ```
+
+<img src="docs/screenshots/prefs.png" alt="The preferences window: When Fully Charged set to Notify, Wait Before Acting 30, Remind Every 60" width="560">
 
 | Setting | Default | Meaning |
 |---|---|---|

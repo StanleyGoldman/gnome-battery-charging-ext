@@ -12,6 +12,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Scripting from 'resource:///org/gnome/shell/ui/scripting.js';
 
 const OUT = GLib.getenv('BATTERY_CHARGING_TEST_OUT') ?? '/tmp';
+const FIFO = GLib.getenv('BATTERY_CHARGING_MOCK_FIFO');
+const UUID = 'battery-charging@stanleygoldman.github.io';
 const MARGIN = 12;
 
 export const METRICS = {};
@@ -23,6 +25,12 @@ async function waitFor(what, condition, timeoutMs = 8000) {
         await Scripting.sleep(100);
     }
     throw new Error(`timed out waiting for ${what}`);
+}
+
+function mock(command) {
+    const stream = Gio.File.new_for_path(FIFO).append_to(Gio.FileCreateFlags.NONE, null);
+    stream.write_all(`${command}\n`, null);
+    stream.close(null);
 }
 
 function findToggle() {
@@ -76,6 +84,61 @@ async function takeScreenshots() {
     await shoot('menu', [quickSettings.menu.box]);
     toggle.menu.close();
     quickSettings.menu.close();
+
+    // The preferences window, with Notify chosen so every row is live.
+    const settings = Main.extensionManager.lookup(UUID).stateObj.getSettings();
+    settings.set_enum('full-battery-action', 1);
+    // dbus-daemon starts the Extensions app, which opens the window, with its own
+    // environment: without the shell's, it reads the user's real settings, not the test
+    // tool's throwaway keyfile. A real session gets this from gnome-session.
+    await Gio.DBus.session.call(
+        'org.freedesktop.DBus',
+        '/org/freedesktop/DBus',
+        'org.freedesktop.DBus',
+        'UpdateActivationEnvironment',
+        new GLib.Variant('(a{ss})', [Object.fromEntries(GLib.get_environ().map(e => e.split(/=(.*)/s, 2)))]),
+        null,
+        Gio.DBusCallFlags.NONE,
+        -1,
+        null
+    );
+    Main.extensionManager.openExtensionPrefs(UUID, '', {});
+    let prefsWindow;
+    await waitFor(
+        'the preferences window',
+        () =>
+            (prefsWindow = global.display
+                .list_all_windows()
+                .find(w => w.get_title() === 'Battery Charging' && w.get_frame_rect().width > 0)),
+        15000
+    );
+    // Its default height is mostly empty space below the one group.
+    await Scripting.sleep(1000);
+    const frame = prefsWindow.get_frame_rect();
+    prefsWindow.move_resize_frame(true, frame.x, frame.y, frame.width, 360);
+    await Scripting.sleep(2000);
+    await shoot('prefs', [prefsWindow.get_compositor_private()]);
+    prefsWindow.delete(global.get_current_time());
+    await Scripting.sleep(500);
+
+    // Notify's banner: Maximize Charge, then BAT0 Full, with no wait.
+    settings.set_uint('full-wait', 0);
+    mock('disable BAT0');
+    mock('full BAT0');
+    const banner = Main.messageTray._bannerBin;
+    await waitFor('the banner', () => banner.get_n_children() > 0 && banner.visible);
+    await Scripting.sleep(1000);
+    // Expanded, as under the pointer, to show its buttons; the panel's clock would show
+    // in the margin.
+    Main.messageTray._expandActiveNotification();
+    Main.panel.hide();
+    await Scripting.sleep(1500);
+    await shoot('notification', [banner]);
+    Main.panel.show();
+    // Limit back on: the action withdraws the notification, which the shell would
+    // otherwise trip over at exit.
+    mock('enable BAT0');
+    await Scripting.sleep(500);
 }
 
 let started = null;
