@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: battery-charging@stanleygoldman.github.io\n"
 "Report-Msgid-Bugs-To: https://github.com/StanleyGoldman/gnome-battery-"
 "charging-ext/issues\n"
-"POT-Creation-Date: 2026-11-06 20:17-0500\n"
+"POT-Creation-Date: 2026-11-07 07:24-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -85,8 +85,25 @@ msgstr ""
 msgid "Switched to Preserve Battery Health"
 msgstr ""
 
+#. Translators: notification title, posted when the battery has stayed fully charged
+#. for a while.
+#: src/strings.js:68
+msgid "Battery Fully Charged"
+msgstr ""
+
+#. Translators: notification body under "Battery Fully Charged". "Preserve Battery
+#. Health" is GNOME Settings' name for the mode that holds the battery below full.
+#: src/strings.js:72
+msgid "Switch to Preserve Battery Health to slow battery wear."
+msgstr ""
+
+#. Translators: a button on the "Battery Fully Charged" notification: show it again later.
+#: src/strings.js:75
+msgid "Remind Me Later"
+msgstr ""
+
 #. Translators: notification body. %s is the mode that was refused ("Maximize Charge").
-#: src/strings.js:71
+#: src/strings.js:82
 #, javascript-format
 msgid "Switching to %s is not allowed."
 msgstr ""
@@ -94,7 +111,7 @@ msgstr ""
 #. Translators: notification body when only some batteries refused. %1$s is the
 #. mode ("Maximize Charge"), %2$d how many batteries refused, %3$s their names
 #. (BAT1, or "BAT0, BAT1"). Leave %2$d out of the singular form only in languages where that form means exactly one.
-#: src/strings.js:77
+#: src/strings.js:88
 #, javascript-format
 msgid "Switching to %1$s is not allowed for one battery (%3$s)."
 msgid_plural "Switching to %1$s is not allowed for %2$d batteries (%3$s)."
