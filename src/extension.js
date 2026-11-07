@@ -74,19 +74,23 @@ const BatteryChargingToggle = GObject.registerClass(
 const BatteryChargingIndicator = GObject.registerClass(
     // eslint-disable-next-line no-shadow -- registerClass names the GType after the class, so the names match.
     class BatteryChargingIndicator extends SystemIndicator {
-        constructor(extension, model, strings) {
+        constructor(extension, model, strings, settings) {
             super();
             this._toggle = new BatteryChargingToggle(extension, model, strings);
             this.quickSettingsItems.push(this._toggle);
 
-            // Like Power Mode: a top-bar icon while Preserve Battery Health is on.
+            // Like Power Mode: a top-bar icon while Preserve Battery Health is on, unless
+            // show-top-bar-icon is off. The toggle is hidden on the lock screen, so the icon is too.
             const icon = this._addIndicator();
             icon.gicon = this._toggle.preserveIcon;
             const sync = () => {
-                icon.visible = this._toggle.visible && this._toggle.checked;
+                icon.visible =
+                    this._toggle.visible && this._toggle.checked && settings.get_boolean('show-top-bar-icon');
             };
             this._toggle.connect('notify::visible', sync);
             this._toggle.connect('notify::checked', sync);
+            const settingsId = settings.connect('changed::show-top-bar-icon', sync);
+            this.connect('destroy', () => settings.disconnect(settingsId));
             sync();
         }
     }
@@ -138,7 +142,7 @@ export default class BatteryChargingExtension extends Extension {
             upower.destroy();
         };
         try {
-            this._indicator = new BatteryChargingIndicator(this, model, strings);
+            this._indicator = new BatteryChargingIndicator(this, model, strings, settings);
         } catch (e) {
             teardown();
             throw e;

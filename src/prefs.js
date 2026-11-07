@@ -1,4 +1,5 @@
-// The preferences window: the Full-battery action and its two timings (spec §5).
+// The preferences window: the Top-bar icon switch, then the Full-battery action and its two
+// timings (spec §5).
 // It runs in its own process and shares nothing with the shell side but the schema.
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
@@ -32,9 +33,18 @@ export default class BatteryChargingPreferences extends ExtensionPreferences {
         ];
 
         const page = new Adw.PreferencesPage();
-        const group = new Adw.PreferencesGroup();
+        const topBarGroup = new Adw.PreferencesGroup({title: _('Top Bar')});
+        page.add(topBarGroup);
+        const group = new Adw.PreferencesGroup({title: _('Full Battery')});
         page.add(group);
         window.add(page);
+
+        const topBarRow = new Adw.SwitchRow({
+            title: _('Show Top-Bar Icon'),
+            subtitle: _('While Preserve Battery Health is on'),
+        });
+        topBarGroup.add(topBarRow);
+        settings.bind('show-top-bar-icon', topBarRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         const actionRow = new Adw.ComboRow({
             title: _('When Fully Charged'),

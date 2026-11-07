@@ -91,7 +91,7 @@ on BAT0`) to see which calls arrived. `return` is a no-op while the mock still o
 
 ## Translations and parallel runs
 
-- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6 and 8 to 12, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
+- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6 and 8 to 13, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
 - **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
 - **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.
 

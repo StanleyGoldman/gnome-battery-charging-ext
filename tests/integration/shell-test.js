@@ -1,5 +1,5 @@
-// Integration tests 1 to 12 (docs/spec.md §8), run inside a headless GNOME
-// Shell by tests/integration/run.sh. Tests 1 to 6 and 8 to 12 run in an English shell, test 7
+// Integration tests 1 to 13 (docs/spec.md §8), run inside a headless GNOME
+// Shell by tests/integration/run.sh. Tests 1 to 6 and 8 to 13 run in an English shell, test 7
 // in a German one ($BATTERY_CHARGING_TEST_PASS says which). run.sh sets
 // BATTERY_CHARGING_MINUTE_MS=1000, so a settings minute lasts a second. The mock UPower is driven through its FIFO
 // ($BATTERY_CHARGING_MOCK_FIFO) and logs to $BATTERY_CHARGING_MOCK_LOG.
@@ -403,6 +403,48 @@ const ENGLISH_TESTS = [
                 if (Main.sessionMode.currentMode === 'unlock-dialog') Main.screenShield.deactivate(false);
                 settings.reset('full-battery-action');
                 settings.reset('full-wait');
+            }
+        },
+    ],
+    [
+        '13 the top-bar icon can be hidden',
+        async () => {
+            const settings = extensionSettings();
+            assert(settings.get_boolean('show-top-bar-icon'), 'show-top-bar-icon is not true by default');
+            try {
+                const toggle = findToggle();
+                assertTopBar(true);
+                settings.set_boolean('show-top-bar-icon', false);
+                assertTopBar(false);
+                assertToggle(toggle, {visible: true, checked: true});
+
+                // Hidden in Maximize Charge too, and still hidden on return to Preserve.
+                mock('disable BAT0');
+                await waitFor('the toggle to follow', () => !toggle.checked);
+                assertTopBar(false);
+                mock('enable BAT0');
+                await waitFor('the toggle to follow', () => toggle.checked);
+                assertTopBar(false);
+
+                settings.set_boolean('show-top-bar-icon', true);
+                assertTopBar(true);
+                assertToggle(toggle, {visible: true, checked: true});
+
+                // Shown again only in Preserve Battery Health.
+                mock('disable BAT0');
+                await waitFor('the toggle to follow', () => !toggle.checked);
+                assertTopBar(false);
+                mock('enable BAT0');
+                await waitFor('the toggle to follow', () => toggle.checked);
+                assertTopBar(true);
+
+                // On the lock screen the key can't show it.
+                Main.screenShield.lock(false);
+                await waitFor('the lock screen', () => Main.sessionMode.currentMode === 'unlock-dialog');
+                assert(!topBarIcon().visible, 'the top-bar icon is shown on the lock screen');
+            } finally {
+                if (Main.sessionMode.currentMode === 'unlock-dialog') Main.screenShield.deactivate(false);
+                settings.reset('show-top-bar-icon');
             }
         },
     ],

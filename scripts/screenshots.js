@@ -112,10 +112,10 @@ async function takeScreenshots() {
                 .find(w => w.get_title() === 'Battery Charging' && w.get_frame_rect().width > 0)),
         15000
     );
-    // Its default height is mostly empty space below the one group.
+    // Its default height is mostly empty space below the two groups.
     await Scripting.sleep(1000);
     const frame = prefsWindow.get_frame_rect();
-    prefsWindow.move_resize_frame(true, frame.x, frame.y, frame.width, 360);
+    prefsWindow.move_resize_frame(true, frame.x, frame.y, frame.width, 440);
     await Scripting.sleep(2000);
     await shoot('prefs', [prefsWindow.get_compositor_private()]);
     prefsWindow.delete(global.get_current_time());
