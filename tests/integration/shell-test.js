@@ -12,6 +12,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 
+import {ExtensionState} from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -289,7 +290,10 @@ const ENGLISH_TESTS = [
                 Main.screenShield.lock(false);
                 await waitFor('the lock screen', () => Main.sessionMode.currentMode === 'unlock-dialog');
                 const state = Main.extensionManager.lookup(UUID).state;
-                assert(state === 1, `the extension's state is ${state} while locked, expected 1 (enabled)`);
+                assert(
+                    state === ExtensionState.ACTIVE,
+                    `the extension's state is ${state} while locked, expected ACTIVE`
+                );
                 assert(findToggle() === toggle, 'the toggle was rebuilt by the lock');
                 assert(!toggle.visible, 'the toggle is shown on the lock screen');
                 assert(!topBarIcon().visible, 'the top-bar icon is shown on the lock screen');
@@ -301,13 +305,14 @@ const ENGLISH_TESTS = [
                     mockLog().slice(before).includes('EnableChargeThreshold(true) on BAT0')
                 );
                 assert(Main.sessionMode.currentMode === 'unlock-dialog', 'the screen unlocked during the wait');
-                // The notice goes through the tray as usual; this test is about the switch.
-                ownSource()?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
                 Main.screenShield.deactivate(false);
                 await waitFor('the unlock', () => Main.sessionMode.currentMode === 'user');
                 await waitFor('the toggle to return', () => findToggle()?.visible);
                 assertToggle(findToggle(), {visible: true, checked: true});
                 assertTopBar(true);
+                const titles = ownSource()?.notifications.map(n => n.title) ?? [];
+                assert(titles.includes('Switched to Preserve Battery Health'), `notices after unlock: ${titles}`);
+                ownSource().destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
             } finally {
                 if (Main.sessionMode.currentMode === 'unlock-dialog') Main.screenShield.deactivate(false);
                 settings.reset('full-battery-action');
