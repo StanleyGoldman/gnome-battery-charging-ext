@@ -60,7 +60,7 @@ Harmless in the container's logs: no Xwayland, colord, AT-SPI bus, GeoClue or ba
 
 ## Locking the screen
 
-`Main.screenShield.lock(false)` locks a headless shell: the session mode becomes `unlock-dialog`, and `Main.screenShield.deactivate(false)` unlocks it. `Main.sessionMode.pushMode('unlock-dialog')` / `popMode` switches the mode alone. On lock, the shell disables every extension whose `metadata.json` lacks `"session-modes": [..., "unlock-dialog"]` and re-enables it on unlock, so a lock test fails if that key goes missing. Read the extension's state with `Main.extensionManager.lookup(uuid).state` (`1` enabled, `2` disabled). Checked on GNOME Shell 50.1 (#74).
+`Main.screenShield.lock(false)` locks a headless shell: the session mode becomes `unlock-dialog`, and `Main.screenShield.deactivate(false)` unlocks it. `Main.sessionMode.pushMode('unlock-dialog')` / `popMode` switches the mode alone. On lock, the shell disables every extension whose `metadata.json` lacks `"session-modes": [..., "unlock-dialog"]` and re-enables it on unlock, so a lock test fails if that key goes missing. Read the extension's state with `Main.extensionManager.lookup(uuid).state` and compare it with `ExtensionState` from `resource:///org/gnome/shell/misc/extensionUtils.js`: `ACTIVE` (1) enabled, `INACTIVE` (2) disabled. There is no `ENABLED`. Checked on GNOME Shell 50.1 (#74).
 
 ## Mocking UPower
 
@@ -91,7 +91,7 @@ on BAT0`) to see which calls arrived. `return` is a no-op while the mock still o
 
 ## Translations and parallel runs
 
-- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6 and 8 to 11, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
+- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6 and 8 to 12, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
 - **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
 - **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.
 

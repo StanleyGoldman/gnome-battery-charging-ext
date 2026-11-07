@@ -47,13 +47,18 @@ const BatteryChargingToggle = GObject.registerClass(
 
             // Not a destroy() override: at shutdown the shell destroys actors from C.
             this._changedId = model.connect('changed', () => this._sync());
-            this.connect('destroy', () => model.disconnect(this._changedId));
+            // Hidden on the lock screen, back on unlock.
+            this._sessionModeId = Main.sessionMode.connect('updated', () => this._sync());
+            this.connect('destroy', () => {
+                model.disconnect(this._changedId);
+                Main.sessionMode.disconnect(this._sessionModeId);
+            });
             this._sync();
         }
 
         _sync() {
             const lit = this._model.lit;
-            this.visible = this._model.visible;
+            this.visible = this._model.visible && Main.sessionMode.currentMode !== 'unlock-dialog';
             this.checked = lit;
             this.subtitle = this._model.subtitle;
             this.accessible_name = this._model.accessibleName;
@@ -220,6 +225,9 @@ export default class BatteryChargingExtension extends Extension {
         previous?.destroy(MessageTray.NotificationDestroyedReason.REPLACED);
     }
 
+    // The extension also runs on the lock screen ("session-modes": ["user", "unlock-dialog"]),
+    // so the Full-battery action can fire while locked and its per-charge state (the wait,
+    // the Notify cycle) survives a lock. Only the toggle and top-bar icon hide there.
     disable() {
         // SOURCE_CLOSED, so Notify's notification going isn't read as a dismiss.
         this._source?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
