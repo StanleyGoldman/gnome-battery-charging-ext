@@ -121,7 +121,7 @@ function leaveFull() {
 }
 
 // Notify's notification in the extension's source, or undefined.
-function fullyCharged() {
+function notifyNotification() {
     return ownSource()?.notifications.find(n => n.title === 'Battery Fully Charged');
 }
 
@@ -276,8 +276,8 @@ const ENGLISH_TESTS = [
                 const toggle = findToggle();
                 const before = mockLog().length;
                 await makeFull(toggle);
-                await waitFor('the notification', () => fullyCharged());
-                const first = fullyCharged();
+                await waitFor('the notification', () => notifyNotification());
+                const first = notifyNotification();
                 assert(
                     first.body === 'Switch to Preserve Battery Health to slow battery wear.',
                     `body is "${first.body}"`
@@ -291,21 +291,21 @@ const ENGLISH_TESTS = [
                 );
 
                 // Left alone, it comes back as a fresh one in place of the first.
-                await waitFor('a reminder', () => fullyCharged() && fullyCharged() !== first);
+                await waitFor('a reminder', () => notifyNotification() && notifyNotification() !== first);
                 assert(ownSource().notifications.length === 1, 'more than one entry in the list');
 
-                fullyCharged().actions[1].activate();
-                assert(fullyCharged() === undefined, 'Remind Me Later left the notification up');
-                await waitFor('the reminder after Remind Me Later', () => fullyCharged());
+                notifyNotification().actions[1].activate();
+                assert(notifyNotification() === undefined, 'Remind Me Later left the notification up');
+                await waitFor('the reminder after Remind Me Later', () => notifyNotification());
 
-                fullyCharged().actions[0].activate();
+                notifyNotification().actions[0].activate();
                 await waitFor('EnableChargeThreshold(true)', () =>
                     mockLog().slice(before).includes('EnableChargeThreshold(true) on BAT0')
                 );
                 await waitFor('the toggle to follow', () => toggle.checked);
                 assertToggle(toggle, {visible: true, checked: true});
                 await Scripting.sleep(3000);
-                assert(fullyCharged() === undefined, 'the notification was not withdrawn');
+                assert(notifyNotification() === undefined, 'the notification was not withdrawn');
             } finally {
                 reset();
             }
@@ -318,17 +318,17 @@ const ENGLISH_TESTS = [
             try {
                 const toggle = findToggle();
                 await makeFull(toggle);
-                await waitFor('the notification', () => fullyCharged());
-                fullyCharged().destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
+                await waitFor('the notification', () => notifyNotification());
+                notifyNotification().destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
                 await Scripting.sleep(3000);
-                assert(fullyCharged() === undefined, 'a reminder came after the dismiss');
+                assert(notifyNotification() === undefined, 'a reminder came after the dismiss');
 
                 leaveFull();
                 await Scripting.sleep(1500);
-                assert(fullyCharged() === undefined, 'a notification while not Full');
+                assert(notifyNotification() === undefined, 'a notification while not Full');
                 mock('full BAT0');
-                await waitFor('the notification on the next full charge', () => fullyCharged());
-                fullyCharged().destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
+                await waitFor('the notification on the next full charge', () => notifyNotification());
+                notifyNotification().destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
             } finally {
                 reset();
             }

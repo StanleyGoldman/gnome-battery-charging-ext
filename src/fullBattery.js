@@ -21,11 +21,11 @@ export const FullBatteryAction = GObject.registerClass(
             'switched': {param_types: [GObject.TYPE_STRING]},
             // Notify: post the notification, or show it again. Its title, its body, and
             // whether it has a Remind Me Later button.
-            'notification-posted': {
+            'post-notification': {
                 param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING, GObject.TYPE_BOOLEAN],
             },
             // Notify: destroy the notification; its cycle is over.
-            'notification-withdrawn': {},
+            'withdraw-notification': {},
         },
     },
     // eslint-disable-next-line no-shadow -- registerClass names the GType after the class, so the names match.
@@ -91,7 +91,8 @@ export const FullBatteryAction = GObject.registerClass(
         // has posted, the next reminder.
         get _due() {
             const {fullWait, renotifyInterval} = this._settings;
-            if (this._buttonSwitch) return null;
+            // A switch in flight decides first: on success "all Full" breaks.
+            if (this._inFlight || this._buttonSwitch) return null;
             if (this._lastNotified === null) return this._fullSince + fullWait * this._minuteMs;
             return renotifyInterval > 0 ? this._lastNotified + renotifyInterval * this._minuteMs : null;
         }
@@ -137,6 +138,8 @@ export const FullBatteryAction = GObject.registerClass(
             if (this._inFlight !== attempt) return;
             this._inFlight = null;
             if (outcome === 'switched') this.emit('switched', this._strings.switchedTitle());
+            // The action may have changed to Notify meanwhile, clearing the flag.
+            this._evaluate();
         }
 
         _post() {
@@ -144,7 +147,7 @@ export const FullBatteryAction = GObject.registerClass(
             this._shown = true;
             const strings = this._strings;
             this.emit(
-                'notification-posted',
+                'post-notification',
                 strings.fullyChargedTitle(),
                 strings.fullyChargedBody(),
                 this._settings.renotifyInterval > 0
@@ -156,18 +159,14 @@ export const FullBatteryAction = GObject.registerClass(
 
         // ✕, Clear all, Delete or a body click: nothing more for this full charge.
         dismissed() {
-            if (!this._shown) return;
-            this._shown = false;
+            if (!this._takeAnswer()) return;
             this._actedOrOverridden = true;
             this._cancelTimer();
         }
 
         // Remind Me Later: the next reminder comes one interval from now.
         remindLater() {
-            if (!this._shown) return;
-            this._shown = false;
-            this._lastNotified = this._clock.now();
-            this._evaluate();
+            if (this._takeAnswer()) this._remindFromNow();
         }
 
         // The Preserve Battery Health button: a user's switch. On success "all Full" breaks
@@ -175,8 +174,7 @@ export const FullBatteryAction = GObject.registerClass(
         // then decides) the cycle carries on as after Remind Me Later, or ends with the
         // interval at 0.
         async preserve() {
-            if (!this._shown) return;
-            this._shown = false;
+            if (!this._takeAnswer()) return;
             this._cancelTimer();
             const attempt = {};
             this._buttonSwitch = attempt;
@@ -186,6 +184,19 @@ export const FullBatteryAction = GObject.registerClass(
             this._buttonSwitch = null;
             if (outcome === 'switched') return;
             if (this._settings.renotifyInterval === 0) this._actedOrOverridden = true;
+            this._remindFromNow();
+        }
+
+        // The notification was out and the user's answer took it down; false if it wasn't
+        // out (already withdrawn or answered).
+        _takeAnswer() {
+            if (!this._shown) return false;
+            this._shown = false;
+            return true;
+        }
+
+        // The next reminder comes one interval from now.
+        _remindFromNow() {
             this._lastNotified = this._clock.now();
             this._evaluate();
         }
@@ -196,7 +207,7 @@ export const FullBatteryAction = GObject.registerClass(
             this._buttonSwitch = null;
             if (!this._shown) return;
             this._shown = false;
-            this.emit('notification-withdrawn');
+            this.emit('withdraw-notification');
         }
 
         _cancelTimer() {

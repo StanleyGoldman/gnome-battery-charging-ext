@@ -143,11 +143,11 @@ export default class BatteryChargingExtension extends Extension {
         const failedId = model.connect('failed', (_m, title, body) => Main.notify(title, body));
         const fullBatteryIds = [
             fullBattery.connect('switched', (_a, title) => this._notify(strings, title)),
-            fullBattery.connect('notification-posted', (_a, title, body, remindLater) =>
-                this._postFullyCharged(fullBattery, strings, {title, body, remindLater})
+            fullBattery.connect('post-notification', (_a, title, body, remindLater) =>
+                this._postNotifyNotification(fullBattery, strings, {title, body, remindLater})
             ),
-            fullBattery.connect('notification-withdrawn', () =>
-                this._fullyCharged?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED)
+            fullBattery.connect('withdraw-notification', () =>
+                this._notifyNotification?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED)
             ),
         ];
         this._indicator.connect('destroy', () => {
@@ -181,7 +181,7 @@ export default class BatteryChargingExtension extends Extension {
 
     // Posts Notify's notification, or shows it again: a fresh one replaces the one in the
     // list, so there is only ever one, with the buttons the interval now calls for.
-    _postFullyCharged(fullBattery, strings, {title, body, remindLater}) {
+    _postNotifyNotification(fullBattery, strings, {title, body, remindLater}) {
         const source = this._ownSource(strings);
         const notification = new MessageTray.Notification({
             source,
@@ -210,11 +210,11 @@ export default class BatteryChargingExtension extends Extension {
         // ✕, Clear all, Delete and a body click all destroy it as DISMISSED. A withdrawal
         // (SOURCE_CLOSED) or a replacement (REPLACED) isn't the user's doing.
         notification.connect('destroy', (_n, reason) => {
-            if (this._fullyCharged === notification) this._fullyCharged = null;
+            if (this._notifyNotification === notification) this._notifyNotification = null;
             if (!answered && reason === MessageTray.NotificationDestroyedReason.DISMISSED) fullBattery.dismissed();
         });
-        const previous = this._fullyCharged;
-        this._fullyCharged = notification;
+        const previous = this._notifyNotification;
+        this._notifyNotification = notification;
         // Added before the old one goes, so the source never empties and closes.
         source.addNotification(notification);
         previous?.destroy(MessageTray.NotificationDestroyedReason.REPLACED);
@@ -224,7 +224,7 @@ export default class BatteryChargingExtension extends Extension {
         // SOURCE_CLOSED, so Notify's notification going isn't read as a dismiss.
         this._source?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
         this._source = null;
-        this._fullyCharged = null;
+        this._notifyNotification = null;
         if (!this._indicator) return;
         this._indicator.quickSettingsItems.forEach(item => item.destroy());
         this._indicator.destroy();
