@@ -95,6 +95,14 @@ on BAT0`) to see which calls arrived. `return` is a no-op while the mock still o
 - **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
 - **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.
 
+## Opening the preferences window in a headless shell
+
+`scripts/screenshots.js` opens the real window with `Main.extensionManager.openExtensionPrefs(uuid, '', {})` and finds it in `global.display.list_all_windows()` by its title. Its gotchas:
+
+- **Copy the shell's environment into the bus first.** `dbus-daemon` starts the Extensions app, which opens the window, and without the shell's environment the app reads the user's **real** dconf rather than the test tool's throwaway keyfile, and draws in a fallback font. A real session gets this from `gnome-session`; the script calls `org.freedesktop.DBus.UpdateActivationEnvironment` with `GLib.get_environ()` itself.
+- **Wait for a frame width above 0** before resizing or capturing: the window is listed before it maps, and a resize sent then is lost.
+- **`screenshots.sh` prints only lines containing `SCREENSHOT` or `JS ERROR`**, so prefix debug logs with `SCREENSHOT`.
+
 ## Checking `prefs.js` without the shell
 
 `scripts/prefs-smoke.js` builds the preferences window in plain `gjs` and prints each row's title, value and sensitivity; its header has the command. Run it under `GSETTINGS_BACKEND=memory` so nothing reaches the user's dconf. What it works around:

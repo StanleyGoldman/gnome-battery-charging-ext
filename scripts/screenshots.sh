@@ -30,6 +30,7 @@ timeout 180 dbus-run-session -- bash -c '
     sleep 1
     BATTERY_CHARGING_UPOWER_BUS=session \
     BATTERY_CHARGING_TEST_OUT="$out" \
+    BATTERY_CHARGING_MOCK_FIFO="$work/fifo" \
     LANGUAGE=en LANG=en_US.UTF-8 \
         gnome-shell-test-tool --headless --disable-animations --extension "$zip" \
         "$here/screenshots.js" > "$work/shell.log" 2>&1 || true
