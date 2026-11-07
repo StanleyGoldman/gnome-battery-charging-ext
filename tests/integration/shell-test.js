@@ -1,5 +1,5 @@
-// Integration tests 1 to 8 and 11 (docs/spec.md §8), run inside a headless GNOME
-// Shell by tests/integration/run.sh. Tests 1 to 6, 8 and 11 run in an English shell, test 7
+// Integration tests 1 to 11 (docs/spec.md §8), run inside a headless GNOME
+// Shell by tests/integration/run.sh. Tests 1 to 6 and 8 to 11 run in an English shell, test 7
 // in a German one ($BATTERY_CHARGING_TEST_PASS says which). run.sh sets
 // BATTERY_CHARGING_MINUTE_MS=1000, so a settings minute lasts a second. The mock UPower is driven through its FIFO
 // ($BATTERY_CHARGING_MOCK_FIFO) and logs to $BATTERY_CHARGING_MOCK_LOG.
@@ -112,6 +112,26 @@ async function makeFull(toggle) {
     mock('disable BAT0');
     mock('full BAT0');
     await waitFor('Maximize Charge', () => !toggle.checked);
+}
+
+// Takes BAT0 out of Full: discharging, below 100 %.
+function leaveFull() {
+    mock('battery-state BAT0 2');
+    mock('percentage BAT0 99');
+}
+
+// Notify's notification in the extension's source, or undefined.
+function notifyNotification() {
+    return ownSource()?.notifications.find(n => n.title === 'Battery Fully Charged');
+}
+
+// Sets the Full-battery action and its timings for one test; returns the reset.
+function useSettings(action, fullWait, renotifyInterval) {
+    const settings = extensionSettings();
+    settings.set_uint('full-wait', fullWait);
+    settings.set_uint('renotify-interval', renotifyInterval);
+    settings.set_string('full-battery-action', action);
+    return () => ['full-battery-action', 'full-wait', 'renotify-interval'].forEach(key => settings.reset(key));
 }
 
 async function screenshot(name) {
@@ -245,6 +265,72 @@ const ENGLISH_TESTS = [
                 assertToggle(toggle, {visible: true, checked: false});
             } finally {
                 settings.reset('full-wait');
+            }
+        },
+    ],
+    [
+        '9 Notify and its buttons',
+        async () => {
+            const reset = useSettings('notify', 1, 2);
+            try {
+                const toggle = findToggle();
+                const before = mockLog().length;
+                await makeFull(toggle);
+                await waitFor('the notification', () => notifyNotification());
+                const first = notifyNotification();
+                assert(
+                    first.body === 'Switch to Preserve Battery Health to slow battery wear.',
+                    `body is "${first.body}"`
+                );
+                assert(first.urgency === MessageTray.Urgency.NORMAL, `urgency is ${first.urgency}`);
+                assert(!first.isTransient, 'the notification is transient');
+                const labels = first.actions.map(a => a.label);
+                assert(
+                    JSON.stringify(labels) === '["Preserve Battery Health","Remind Me Later"]',
+                    `buttons are ${JSON.stringify(labels)}`
+                );
+
+                // Left alone, it comes back as a fresh one in place of the first.
+                await waitFor('a reminder', () => notifyNotification() && notifyNotification() !== first);
+                assert(ownSource().notifications.length === 1, 'more than one entry in the list');
+
+                notifyNotification().actions[1].activate();
+                assert(notifyNotification() === undefined, 'Remind Me Later left the notification up');
+                await waitFor('the reminder after Remind Me Later', () => notifyNotification());
+
+                notifyNotification().actions[0].activate();
+                await waitFor('EnableChargeThreshold(true)', () =>
+                    mockLog().slice(before).includes('EnableChargeThreshold(true) on BAT0')
+                );
+                await waitFor('the toggle to follow', () => toggle.checked);
+                assertToggle(toggle, {visible: true, checked: true});
+                await Scripting.sleep(3000);
+                assert(notifyNotification() === undefined, 'the notification was not withdrawn');
+            } finally {
+                reset();
+            }
+        },
+    ],
+    [
+        '10 Notify dismissed, then a new full charge',
+        async () => {
+            const reset = useSettings('notify', 1, 1);
+            try {
+                const toggle = findToggle();
+                await makeFull(toggle);
+                await waitFor('the notification', () => notifyNotification());
+                notifyNotification().destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
+                await Scripting.sleep(3000);
+                assert(notifyNotification() === undefined, 'a reminder came after the dismiss');
+
+                leaveFull();
+                await Scripting.sleep(1500);
+                assert(notifyNotification() === undefined, 'a notification while not Full');
+                mock('full BAT0');
+                await waitFor('the notification on the next full charge', () => notifyNotification());
+                notifyNotification().destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
+            } finally {
+                reset();
             }
         },
     ],

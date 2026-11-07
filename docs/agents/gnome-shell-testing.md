@@ -86,10 +86,12 @@ on BAT0`) to see which calls arrived. `return` is a no-op while the mock still o
 - **Change keys freely:** the tests write through `Main.extensionManager.lookup(uuid).stateObj.getSettings()`. `gnome-shell-test-tool` sets `GSETTINGS_BACKEND=keyfile` under a throwaway `XDG_CONFIG_HOME`, so nothing reaches the user's dconf. Reset each key in a `finally`, since the tests share one shell.
 - **Make BAT0 Full:** `disable BAT0`, then `full BAT0`. A battery with its limit on is never Full.
 - **Read notifications as objects:** find the extension's source in `Main.messageTray.getSources()` by its title, "Battery Charging".
+- **Press a button with `notification.actions[i].activate()`.** It runs the callback, then the notification destroys itself with the default reason, `DISMISSED`, the same reason ✕ gives. The extension marks the notification answered in the callback so that destroy isn't read as a dismiss; a destroy handler that tests the reason alone takes every button for ✕. Checked in GNOME Shell 50's `messageTray.js` (#79).
+- **A notification's last destroy closes its source.** `Source` destroys itself once its last notification goes, so a replacement is added before the old one is destroyed with `REPLACED`.
 
 ## Translations and parallel runs
 
-- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6, 8 and 11, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
+- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6 and 8 to 11, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
 - **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
 - **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.
 

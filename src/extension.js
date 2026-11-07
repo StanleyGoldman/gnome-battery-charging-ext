@@ -141,35 +141,90 @@ export default class BatteryChargingExtension extends Extension {
         // Cleanup hangs off the actor's destroy signal, not a destroy() override.
         this._indicator.connect('destroy', teardown);
         const failedId = model.connect('failed', (_m, title, body) => Main.notify(title, body));
-        const switchedId = fullBattery.connect('switched', (_a, title) => this._notify(strings.batteryCharging, title));
+        const fullBatteryIds = [
+            fullBattery.connect('switched', (_a, title) => this._notify(strings, title)),
+            fullBattery.connect('post-notification', (_a, title, body, remindLater) =>
+                this._postNotifyNotification(fullBattery, strings, {title, body, remindLater})
+            ),
+            fullBattery.connect('withdraw-notification', () =>
+                this._notifyNotification?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED)
+            ),
+        ];
         this._indicator.connect('destroy', () => {
             model.disconnect(failedId);
-            fullBattery.disconnect(switchedId);
+            fullBatteryIds.forEach(id => fullBattery.disconnect(id));
         });
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
     }
 
-    // Posts a button-less notice on the extension's own source, built on demand.
-    _notify(sourceTitle, title) {
+    // The extension's own source, built on demand.
+    _ownSource(strings) {
         if (!this._source) {
-            this._source = new MessageTray.Source({title: sourceTitle, icon: bundledIcon(this, PRESERVE_ICON)});
+            this._source = new MessageTray.Source({
+                title: strings.batteryCharging,
+                icon: bundledIcon(this, PRESERVE_ICON),
+            });
             // The tray destroys a source once its last notification goes.
             this._source.connect('destroy', () => {
                 this._source = null;
             });
             Main.messageTray.add(this._source);
         }
+        return this._source;
+    }
+
+    // Posts a button-less notice on the extension's own source.
+    _notify(strings, title) {
+        const source = this._ownSource(strings);
+        source.addNotification(new MessageTray.Notification({source, title, urgency: MessageTray.Urgency.NORMAL}));
+    }
+
+    // Posts Notify's notification, or shows it again: a fresh one replaces the one in the
+    // list, so there is only ever one, with the buttons the interval now calls for.
+    _postNotifyNotification(fullBattery, strings, {title, body, remindLater}) {
+        const source = this._ownSource(strings);
         const notification = new MessageTray.Notification({
-            source: this._source,
+            source,
             title,
+            body,
+            iconName: 'battery-full-charged-symbolic',
             urgency: MessageTray.Urgency.NORMAL,
+            isTransient: false,
         });
-        this._source.addNotification(notification);
+        // A button's callback runs first; then the notification destroys itself as
+        // DISMISSED, which mustn't count as a dismiss.
+        let answered = false;
+        const answer = callback => () => {
+            answered = true;
+            callback();
+        };
+        notification.addAction(
+            strings.preserveBatteryHealth,
+            answer(() => fullBattery.preserve())
+        );
+        if (remindLater)
+            notification.addAction(
+                strings.remindLater(),
+                answer(() => fullBattery.remindLater())
+            );
+        // ✕, Clear all, Delete and a body click all destroy it as DISMISSED. A withdrawal
+        // (SOURCE_CLOSED) or a replacement (REPLACED) isn't the user's doing.
+        notification.connect('destroy', (_n, reason) => {
+            if (this._notifyNotification === notification) this._notifyNotification = null;
+            if (!answered && reason === MessageTray.NotificationDestroyedReason.DISMISSED) fullBattery.dismissed();
+        });
+        const previous = this._notifyNotification;
+        this._notifyNotification = notification;
+        // Added before the old one goes, so the source never empties and closes.
+        source.addNotification(notification);
+        previous?.destroy(MessageTray.NotificationDestroyedReason.REPLACED);
     }
 
     disable() {
+        // SOURCE_CLOSED, so Notify's notification going isn't read as a dismiss.
         this._source?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
         this._source = null;
+        this._notifyNotification = null;
         if (!this._indicator) return;
         this._indicator.quickSettingsItems.forEach(item => item.destroy());
         this._indicator.destroy();
