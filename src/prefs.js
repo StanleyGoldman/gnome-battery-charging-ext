@@ -35,8 +35,8 @@ export default class BatteryChargingPreferences extends ExtensionPreferences {
         const page = new Adw.PreferencesPage();
         const topBarGroup = new Adw.PreferencesGroup({title: _('Top Bar')});
         page.add(topBarGroup);
-        const group = new Adw.PreferencesGroup({title: _('Full Battery')});
-        page.add(group);
+        const fullBatteryGroup = new Adw.PreferencesGroup({title: _('Full Battery')});
+        page.add(fullBatteryGroup);
         window.add(page);
 
         const topBarRow = new Adw.SwitchRow({
@@ -50,17 +50,17 @@ export default class BatteryChargingPreferences extends ExtensionPreferences {
             title: _('When Fully Charged'),
             model: Gtk.StringList.new(actions.map(a => a.label)),
         });
-        group.add(actionRow);
+        fullBatteryGroup.add(actionRow);
 
         const waitRow = minutesRow(
             _('Wait Before Acting'),
             _('Minutes the battery stays fully charged first; 0 acts at once')
         );
-        group.add(waitRow);
+        fullBatteryGroup.add(waitRow);
         settings.bind('full-wait', waitRow, 'value', Gio.SettingsBindFlags.DEFAULT);
 
         const renotifyRow = minutesRow(_('Remind Every'), _('Minutes between notifications; 0 notifies once'));
-        group.add(renotifyRow);
+        fullBatteryGroup.add(renotifyRow);
         settings.bind('renotify-interval', renotifyRow, 'value', Gio.SettingsBindFlags.DEFAULT);
 
         // An enum key won't bind() to `selected`, so sync the combo by hand, both ways.
