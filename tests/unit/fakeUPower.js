@@ -1,6 +1,10 @@
 // A fake of the UPower interface the model takes (see src/model.js).
 
 export const DeviceType = {LINE_POWER: 1, BATTERY: 2, UPS: 3, MOUSE: 5};
+export const DeviceState = {CHARGING: 1, DISCHARGING: 2, FULLY_CHARGED: 4, PENDING_CHARGE: 5};
+
+// The props of a Full battery: limit off, fully charged.
+export const FULL = {chargeThresholdEnabled: false, state: DeviceState.FULLY_CHARGED, percentage: 100};
 
 let nextPath = 0;
 
@@ -13,6 +17,8 @@ export function battery(props = {}) {
         powerSupply: true,
         chargeThresholdSupported: true,
         chargeThresholdEnabled: false,
+        state: DeviceState.DISCHARGING,
+        percentage: 50,
         ...props,
     };
 }

@@ -47,6 +47,7 @@ run_pass() {
         trap "kill $mock 2>/dev/null || true" EXIT
         sleep 1
         BATTERY_CHARGING_UPOWER_BUS=session \
+        BATTERY_CHARGING_MINUTE_MS=1000 \
         BATTERY_CHARGING_MOCK_FIFO="$out/$name.fifo" \
         BATTERY_CHARGING_MOCK_LOG="$out/$name-mock.log" \
         BATTERY_CHARGING_TEST_PASS=$name \
@@ -75,7 +76,7 @@ check_pass() {
 
 run_pass english en
 run_pass german de
-check_pass english 6
+check_pass english 8
 check_pass german 1
-[[ $failed -eq 0 ]] && echo "All 7 integration tests passed."
+[[ $failed -eq 0 ]] && echo "All 9 integration tests passed."
 exit $failed

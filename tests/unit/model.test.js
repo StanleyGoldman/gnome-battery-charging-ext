@@ -1,5 +1,5 @@
 import {test, assertEqual} from './harness.js';
-import {DeviceType, FakeUPower, battery, settle} from './fakeUPower.js';
+import {DeviceState, DeviceType, FULL, FakeUPower, battery, settle} from './fakeUPower.js';
 
 import {BatteryChargingModel} from '../../src/model.js';
 import {createStrings} from '../../src/strings.js';
@@ -479,4 +479,155 @@ test('the toggle text comes from the injected translations', async () => {
     await settle();
     assertEqual(model.subtitle, 'Maximal', 'subtitle');
     assertEqual(model.accessibleName, 'Batterieladung: Maximal laden', 'accessible name');
+});
+
+// Full (docs/spec.md §5): limit off, and fully charged or charging at 100 %.
+test('a fully charged battery in Maximize Charge is Full', async () => {
+    const model = await modelFor(new FakeUPower({devices: [battery(FULL)]}));
+    assertEqual(model.allFull, true, 'allFull');
+});
+
+test('a battery charging at 100 % is Full', async () => {
+    const model = await modelFor(
+        new FakeUPower({devices: [battery({...FULL, state: DeviceState.CHARGING, percentage: 100})]})
+    );
+    assertEqual(model.allFull, true, 'allFull');
+});
+
+test('a battery charging below 100 % is not Full', async () => {
+    const model = await modelFor(
+        new FakeUPower({devices: [battery({...FULL, state: DeviceState.CHARGING, percentage: 99.5})]})
+    );
+    assertEqual(model.allFull, false, 'allFull');
+});
+
+test('a battery at 100 % that is neither charging nor fully charged is not Full', async () => {
+    const model = await modelFor(
+        new FakeUPower({devices: [battery({...FULL, state: DeviceState.PENDING_CHARGE, percentage: 100})]})
+    );
+    assertEqual(model.allFull, false, 'allFull');
+});
+
+test('a battery in Preserve Battery Health is never Full', async () => {
+    const model = await modelFor(new FakeUPower({devices: [battery({...FULL, chargeThresholdEnabled: true})]}));
+    assertEqual(model.allFull, false, 'allFull');
+});
+
+test('the machine is Full only when every supporting battery is', async () => {
+    const model = await modelFor(new FakeUPower({devices: [battery(FULL), battery()]}));
+    assertEqual(model.allFull, false, 'allFull');
+});
+
+test('a peripheral battery does not stop the machine being Full', async () => {
+    const model = await modelFor(new FakeUPower({devices: [battery(FULL), battery({powerSupply: false})]}));
+    assertEqual(model.allFull, true, 'allFull');
+});
+
+test('with no supporting battery the machine is not Full', async () => {
+    const model = await modelFor(new FakeUPower({devices: [battery({...FULL, powerSupply: false})]}));
+    assertEqual(model.allFull, false, 'allFull');
+});
+
+function countFullChanges(model) {
+    const counter = {count: 0};
+    model.connect('full-changed', () => counter.count++);
+    return counter;
+}
+
+test('reaching Full through State and Percentage reports full-changed, not a toggle change', async () => {
+    const bat = battery({state: DeviceState.CHARGING, percentage: 99});
+    const upower = new FakeUPower({devices: [bat]});
+    const model = await modelFor(upower);
+    const changes = countChanges(model);
+    const fullChanges = countFullChanges(model);
+
+    upower.change(bat, {percentage: 100});
+
+    assertEqual([model.allFull, fullChanges.count, changes.count], [true, 1, 0], 'allFull, full-changed, changed');
+});
+
+test('a change that leaves Full as it was reports nothing', async () => {
+    const bat = battery(FULL);
+    const upower = new FakeUPower({devices: [bat]});
+    const model = await modelFor(upower);
+    const fullChanges = countFullChanges(model);
+
+    upower.change(bat, {state: DeviceState.CHARGING, percentage: 100});
+
+    assertEqual(fullChanges.count, 0, 'full-changed emissions');
+});
+
+test('notices that touch only UpdateTime are ignored', async () => {
+    const bat = battery({state: DeviceState.CHARGING, percentage: 99});
+    const upower = new FakeUPower({devices: [bat]});
+    const model = await modelFor(upower);
+    const changes = countChanges(model);
+    const fullChanges = countFullChanges(model);
+
+    // The value moved without a notice for it: only an UpdateTime notice arrives.
+    bat.percentage = 100;
+    upower.change(bat, {updateTime: 1700000000});
+
+    assertEqual([fullChanges.count, changes.count], [0, 0], 'full-changed, changed');
+});
+
+test('turning the limit on breaks Full', async () => {
+    const bat = battery(FULL);
+    const upower = new FakeUPower({devices: [bat]});
+    const model = await modelFor(upower);
+    const fullChanges = countFullChanges(model);
+
+    upower.change(bat, {chargeThresholdEnabled: true});
+
+    assertEqual([model.allFull, fullChanges.count], [false, 1], 'allFull, full-changed');
+});
+
+test('an added battery that is not Full breaks Full, and its removal restores it', async () => {
+    const upower = new FakeUPower({devices: [battery(FULL)]});
+    const model = await modelFor(upower);
+    const fullChanges = countFullChanges(model);
+    const other = battery();
+
+    upower.add(other);
+    assertEqual([model.allFull, fullChanges.count], [false, 1], 'after add');
+    upower.remove(other);
+    assertEqual([model.allFull, fullChanges.count], [true, 2], 'after remove');
+});
+
+test('the first listing and UPower going away report full-changed', async () => {
+    const upower = new FakeUPower({devices: [battery(FULL)]});
+    const model = new BatteryChargingModel(upower, english);
+    const fullChanges = countFullChanges(model);
+    await settle();
+    assertEqual([model.allFull, fullChanges.count], [true, 1], 'after listing');
+    upower.vanish();
+    assertEqual([model.allFull, fullChanges.count], [false, 2], 'after vanish');
+});
+
+test('a switch resolves to its outcome: switched, failed or superseded', async () => {
+    const bat = battery();
+    const upower = new FakeUPower({devices: [bat]});
+    upower.holdSets = true;
+    const model = await modelFor(upower);
+
+    const first = model.switchTo(true);
+    const second = model.switchTo(false);
+    upower.releaseSets();
+    assertEqual([await first, await second], ['superseded', 'switched'], 'outcomes');
+
+    upower.failSets.add(bat.path);
+    const refused = model.switchTo(true);
+    upower.releaseSets();
+    assertEqual(await refused, 'failed', 'refused outcome');
+});
+
+test('every switch announces its target mode as it starts', async () => {
+    const model = await modelFor(new FakeUPower({devices: [battery()]}));
+    const started = [];
+    model.connect('switch-started', (_m, preserve) => started.push(preserve));
+
+    model.switchTo(true);
+    model.switchTo(false);
+
+    assertEqual(started, [true, false], 'announced modes');
 });

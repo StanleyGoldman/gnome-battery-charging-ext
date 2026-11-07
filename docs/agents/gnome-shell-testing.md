@@ -53,7 +53,7 @@ failed in-image run. What the shell needs in a container, and where each is prov
   shell's calls on it fail softly (`ServiceUnknown` for login1, PolicyKit, GDM).
 
 A pass whose bus fails to start leaves no `<pass>.log`, only `grep: ... No such file` and
-`FAIL:  of 6`: `run.sh` sends `dbus-run-session`'s own stderr to `/dev/null`. Run
+`FAIL:  of <n>`: `run.sh` sends `dbus-run-session`'s own stderr to `/dev/null`. Run
 `dbus-run-session -- true` in the container to see why.
 
 Harmless in the container's logs: no Xwayland, colord, AT-SPI bus, GeoClue or backgrounds.
@@ -80,9 +80,16 @@ objects (`Gjs-CRITICAL ... has been already disposed`).
 The shell-side script writes to the FIFO and reads the mock's log (`EnableChargeThreshold(false)
 on BAT0`) to see which calls arrived. `return` is a no-op while the mock still owns the name.
 
+## Full-battery action tests
+
+- **A settings minute lasts a second:** `run.sh` sets `BATTERY_CHARGING_MINUTE_MS=1000`, so `full-wait` 1 expires in about a second.
+- **Change keys freely:** the tests write through `Main.extensionManager.lookup(uuid).stateObj.getSettings()`. `gnome-shell-test-tool` sets `GSETTINGS_BACKEND=keyfile` under a throwaway `XDG_CONFIG_HOME`, so nothing reaches the user's dconf. Reset each key in a `finally`, since the tests share one shell.
+- **Make BAT0 Full:** `disable BAT0`, then `full BAT0`. A battery with its limit on is never Full.
+- **Read notifications as objects:** find the extension's source in `Main.messageTray.getSources()` by its title, "Battery Charging".
+
 ## Translations and parallel runs
 
-- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
+- **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6, 8 and 11, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
 - **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
 - **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.
 

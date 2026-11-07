@@ -26,6 +26,8 @@ const DeviceProxy = Gio.DBusProxy.makeProxyWrapper(`
     <property name="PowerSupply" type="b" access="read"/>
     <property name="ChargeThresholdSupported" type="b" access="read"/>
     <property name="ChargeThresholdEnabled" type="b" access="read"/>
+    <property name="State" type="u" access="read"/>
+    <property name="Percentage" type="d" access="read"/>
     <method name="EnableChargeThreshold"><arg type="b" direction="in"/></method>
   </interface>
 </node>`);
@@ -195,6 +197,12 @@ export class UPowerClient {
             },
             get chargeThresholdEnabled() {
                 return proxy.ChargeThresholdEnabled;
+            },
+            get state() {
+                return proxy.State;
+            },
+            get percentage() {
+                return proxy.Percentage;
             },
         };
         const changedId = proxy.connect('g-properties-changed', (_p, changed) =>

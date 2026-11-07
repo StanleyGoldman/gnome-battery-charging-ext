@@ -9,22 +9,37 @@
 //     'appeared', 'vanished'           UPower started or stopped
 //     'device-added' (device)
 //     'device-removed' (path)
-//     'device-changed' (path, propertyNames)  D-Bus names, e.g. 'ChargeThresholdEnabled'
+//     'device-changed' (path, propertyNames)  D-Bus names, e.g. 'ChargeThresholdEnabled', 'State'
 // and the strings from createStrings() in strings.js (docs/spec.md §6).
 // A device is {path, nativePath, type, powerSupply, chargeThresholdSupported,
-// chargeThresholdEnabled}, its properties kept current by the interface.
+// chargeThresholdEnabled, state, percentage}, its properties kept current by the interface.
 
 import GObject from 'gi://GObject';
 
 const DEVICE_TYPE_BATTERY = 2;
 const DEVICE_TYPE_UPS = 3;
+const DEVICE_STATE_CHARGING = 1;
+const DEVICE_STATE_FULLY_CHARGED = 4;
+
+// GNOME Shell 50's "charged" battery-icon rule, for a battery with its limit off.
+function isFull(device) {
+    if (device.chargeThresholdEnabled) return false;
+    return (
+        device.state === DEVICE_STATE_FULLY_CHARGED ||
+        (device.state === DEVICE_STATE_CHARGING && device.percentage >= 100)
+    );
+}
 
 export const BatteryChargingModel = GObject.registerClass(
     {
         Signals: {
-            changed: {},
+            'changed': {},
+            // allFull flipped.
+            'full-changed': {},
+            // A switch began; true when its target is Preserve Battery Health.
+            'switch-started': {param_types: [GObject.TYPE_BOOLEAN]},
             // The finished notification title and body.
-            failed: {param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING]},
+            'failed': {param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING]},
         },
     },
     // eslint-disable-next-line no-shadow -- registerClass names the GType after the class, so the names match.
@@ -40,6 +55,7 @@ export const BatteryChargingModel = GObject.registerClass(
             this._destroyed = false;
             this._click = 0; // counts switches; only the latest one's outcome counts
             this._pending = null; // the mode (true: Preserve) the latest click asked for, until its replies are in
+            this._wasFull = false;
             this._upowerIds = [
                 upower.connect('appeared', () => this._load()),
                 upower.connect('vanished', () => this._onVanished()),
@@ -74,6 +90,7 @@ export const BatteryChargingModel = GObject.registerClass(
             }
             this._removedWhileLoading = null;
             this.emit('changed');
+            this._checkFull();
         }
 
         _onVanished() {
@@ -83,23 +100,36 @@ export const BatteryChargingModel = GObject.registerClass(
             this._pending = null;
             this._devices.clear();
             this.emit('changed');
+            this._checkFull();
         }
 
         _onDeviceAdded(device) {
             // Left as it is, even when its setting differs from the others' (#3).
             this._devices.set(device.path, device);
             this.emit('changed');
+            this._checkFull();
         }
 
         _onDeviceRemoved(path) {
             this._devices.delete(path);
             this._removedWhileLoading?.add(path);
             this.emit('changed');
+            this._checkFull();
         }
 
         _onDeviceChanged(propertyNames) {
-            // Percentage and rate updates arrive constantly; only Battery Charging matters.
-            if (propertyNames.some(name => name.startsWith('ChargeThreshold'))) this.emit('changed');
+            // Rate and UpdateTime notices arrive constantly and are ignored. State and
+            // Percentage feed Full only.
+            const threshold = propertyNames.some(name => name.startsWith('ChargeThreshold'));
+            if (threshold) this.emit('changed');
+            if (threshold || propertyNames.includes('State') || propertyNames.includes('Percentage')) this._checkFull();
+        }
+
+        _checkFull() {
+            const full = this.allFull;
+            if (full === this._wasFull) return;
+            this._wasFull = full;
+            this.emit('full-changed');
         }
 
         get _supportingBatteries() {
@@ -118,6 +148,17 @@ export const BatteryChargingModel = GObject.registerClass(
             return this._supportingBatteries.some(d => d.chargeThresholdEnabled);
         }
 
+        // A switch awaits its replies.
+        get switching() {
+            return this._pending !== null;
+        }
+
+        // Every supporting battery is Full; false with none.
+        get allFull() {
+            const batteries = this._supportingBatteries;
+            return batteries.length > 0 && batteries.every(isFull);
+        }
+
         get subtitle() {
             return this._strings.shortModeName(this.lit);
         }
@@ -128,15 +169,18 @@ export const BatteryChargingModel = GObject.registerClass(
 
         // Optimistic: shows the target mode until every reply to the latest click is in,
         // then follows UPower again. A superseded click's replies are ignored.
+        // Resolves to 'switched', 'failed', or 'superseded' (by a later switch, UPower going
+        // away, or destroy).
         async switchTo(preserve) {
             const click = ++this._click;
             const targets = this._supportingBatteries;
             this._pending = preserve;
+            this.emit('switch-started', preserve);
             this.emit('changed');
             const results = await Promise.allSettled(
                 targets.map(d => this._upower.setChargeThreshold(d.path, preserve))
             );
-            if (click !== this._click || this._destroyed) return;
+            if (click !== this._click || this._destroyed) return 'superseded';
             this._pending = null;
             // A battery that vanished mid-switch has its error dropped.
             const failed = targets.filter((d, i) => results[i].status === 'rejected' && this._devices.has(d.path));
@@ -145,7 +189,9 @@ export const BatteryChargingModel = GObject.registerClass(
             if (failed.length > 0) {
                 const present = targets.filter(d => this._devices.has(d.path)).length;
                 this._reportFailure(preserve, failed, present);
+                return 'failed';
             }
+            return 'switched';
         }
 
         _reportFailure(preserve, failed, total) {

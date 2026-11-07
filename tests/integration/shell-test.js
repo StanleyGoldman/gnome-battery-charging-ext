@@ -1,6 +1,7 @@
-// Integration tests 1 to 7 (docs/spec.md §8), run inside a headless GNOME
-// Shell by tests/integration/run.sh. Tests 1 to 6 run in an English shell, test 7 in a
-// German one ($BATTERY_CHARGING_TEST_PASS says which). The mock UPower is driven through its FIFO
+// Integration tests 1 to 8 and 11 (docs/spec.md §8), run inside a headless GNOME
+// Shell by tests/integration/run.sh. Tests 1 to 6, 8 and 11 run in an English shell, test 7
+// in a German one ($BATTERY_CHARGING_TEST_PASS says which). run.sh sets
+// BATTERY_CHARGING_MINUTE_MS=1000, so a settings minute lasts a second. The mock UPower is driven through its FIFO
 // ($BATTERY_CHARGING_MOCK_FIFO) and logs to $BATTERY_CHARGING_MOCK_LOG.
 // Results are logged as "INTEGRATION PASS|FAIL <name>"; run.sh reads them.
 //
@@ -12,6 +13,7 @@ import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Scripting from 'resource:///org/gnome/shell/ui/scripting.js';
 
@@ -94,6 +96,22 @@ function assertTopBar(shown) {
             iconName(icon.gicon) === 'battery-preserve-health-symbolic.svg',
             `top-bar icon is ${iconName(icon.gicon)}`
         );
+}
+
+function extensionSettings() {
+    return Main.extensionManager.lookup(UUID).stateObj.getSettings();
+}
+
+// The extension's own notification source, by its title; undefined until it posts.
+function ownSource() {
+    return Main.messageTray.getSources().find(src => src.title === 'Battery Charging');
+}
+
+// Makes BAT0 Full: limit off, fully charged.
+async function makeFull(toggle) {
+    mock('disable BAT0');
+    mock('full BAT0');
+    await waitFor('Maximize Charge', () => !toggle.checked);
 }
 
 async function screenshot(name) {
@@ -208,6 +226,53 @@ const ENGLISH_TESTS = [
             await Scripting.sleep(1000);
             manager.enableExtension(UUID);
             await waitFor('the toggle to return', () => findToggle()?.visible);
+        },
+    ],
+    [
+        '8 Off by default',
+        async () => {
+            const settings = extensionSettings();
+            assert(settings.get_string('full-battery-action') === 'off', 'the action is not Off by default');
+            settings.set_uint('full-wait', 1);
+            try {
+                const toggle = findToggle();
+                const before = mockLog().length;
+                await makeFull(toggle);
+                mock('touch BAT0');
+                await Scripting.sleep(3000);
+                assert(!mockLog().slice(before).includes('EnableChargeThreshold'), 'the mock logged a write');
+                assert((ownSource()?.notifications.length ?? 0) === 0, 'a notification was posted');
+                assertToggle(toggle, {visible: true, checked: false});
+            } finally {
+                settings.reset('full-wait');
+            }
+        },
+    ],
+    [
+        '11 Switch automatically',
+        async () => {
+            const settings = extensionSettings();
+            settings.set_uint('full-wait', 1);
+            settings.set_string('full-battery-action', 'switch');
+            try {
+                const toggle = findToggle();
+                const before = mockLog().length;
+                await makeFull(toggle);
+                await waitFor('EnableChargeThreshold(true)', () =>
+                    mockLog().slice(before).includes('EnableChargeThreshold(true) on BAT0')
+                );
+                await waitFor('the toggle to follow', () => toggle.checked);
+                assertToggle(toggle, {visible: true, checked: true});
+                await waitFor('the notice', () => ownSource()?.notifications.length > 0);
+                const [notice] = ownSource().notifications;
+                assert(notice.title === 'Switched to Preserve Battery Health', `notice title is "${notice.title}"`);
+                assert(notice.urgency === MessageTray.Urgency.NORMAL, `notice urgency is ${notice.urgency}`);
+                assert(notice.actions.length === 0, `the notice has ${notice.actions.length} buttons`);
+                notice.destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
+            } finally {
+                settings.reset('full-battery-action');
+                settings.reset('full-wait');
+            }
         },
     ],
 ];

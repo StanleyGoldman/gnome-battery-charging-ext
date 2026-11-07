@@ -110,7 +110,7 @@ Source: #3, #7, #8, #53, #56.
 **The wait.**
 - The wait runs while "all Full" holds. Any break cancels it, and when "all Full" holds again a fresh wait starts from zero.
 - It starts when the extension first sees "all Full": at enable, when a change makes it true, and when the action changes from Off. UPower keeps no "full since" time.
-- It runs on wall-clock time: the extension records the real time when "all Full" began, so time spent suspended counts. On resume, if the wait has passed, the action fires at once; if the battery stopped being Full while suspended, UPower's re-read breaks the condition as usual.
+- It runs on wall-clock time: the extension records the real time when "all Full" began, so time spent suspended counts. GLib's timers stop during suspend, so the extension checks the wall clock at least once a settings minute: on resume, if the wait has passed, the action fires within a minute; if the battery stopped being Full while suspended, UPower's re-read breaks the condition as usual.
 - Changing `full-wait` mid-wait measures the time already spent Full against the new value; if it has already passed, the action fires at once. The same holds for `renotify-interval` against the time since the last notification.
 - Batteries coming and going: only the condition matters. An added battery that isn't Full cancels the wait; a removal that leaves only Full batteries keeps it running or starts one.
 - With the wait at 0, the action still runs from a zero-delay timer, never inside a change handler (§4 Writing state).

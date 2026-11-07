@@ -9,6 +9,7 @@ e.g. `mock-upower.py BAT0:enabled BAT1:unsupported` (default: BAT0).
 
 import os
 import sys
+import time
 import warnings
 
 from gi.repository import Gio, GLib
@@ -37,6 +38,9 @@ DEVICE_XML = """
     <property name="PowerSupply" type="b" access="read"/>
     <property name="ChargeThresholdSupported" type="b" access="read"/>
     <property name="ChargeThresholdEnabled" type="b" access="read"/>
+    <property name="State" type="u" access="read"/>
+    <property name="Percentage" type="d" access="read"/>
+    <property name="UpdateTime" type="t" access="read"/>
     <method name="EnableChargeThreshold"><arg type="b" direction="in"/></method>
   </interface>
 </node>"""
@@ -47,6 +51,10 @@ HELP = """commands (NAME is e.g. BAT0):
   remove NAME                           remove a battery
   enable NAME | disable NAME            change the limit from "outside" (like GNOME Settings)
   support NAME on|off                   flip ChargeThresholdSupported
+  battery-state NAME N                  set State (1 charging, 2 discharging, 4 fully charged)
+  percentage NAME P                     set Percentage
+  full NAME                             State 4 and Percentage 100 (Full once the limit is off)
+  touch NAME                            a change notice for UpdateTime alone, as UPower sends ~every 30 s
   fail NAME [MESSAGE]                   make EnableChargeThreshold fail on NAME
                                         (default: "Operation is not allowed.")
   ok NAME                               stop failing
@@ -77,13 +85,16 @@ def print_state():
     for name, b in batteries.items():
         print(
             f'  {name}: power-supply={b["power_supply"]} supported={b["supported"]} '
-            f'enabled={b["enabled"]} fail={b["fail"]!r}'
+            f'enabled={b["enabled"]} state={b["state"]} percentage={b["percentage"]} fail={b["fail"]!r}'
         )
     print(f'  delay={delay}s', flush=True)
 
 
+PROPERTY_TYPES = {'State': 'u', 'Percentage': 'd', 'UpdateTime': 't'}
+
+
 def emit_changed(name, **props):
-    variants = {k: GLib.Variant('b', v) for k, v in props.items()}
+    variants = {k: GLib.Variant(PROPERTY_TYPES.get(k, 'b'), v) for k, v in props.items()}
     conn.emit_signal(
         None,
         path_of(name),
@@ -110,6 +121,9 @@ def device_get_property(_conn, _sender, path, _iface, prop):
         'PowerSupply': GLib.Variant('b', b['power_supply']),
         'ChargeThresholdSupported': GLib.Variant('b', b['supported']),
         'ChargeThresholdEnabled': GLib.Variant('b', b['enabled']),
+        'State': GLib.Variant('u', b['state']),
+        'Percentage': GLib.Variant('d', b['percentage']),
+        'UpdateTime': GLib.Variant('t', b['update_time']),
     }[prop]
 
 
@@ -154,6 +168,9 @@ def add(name, *flags):
         'power_supply': 'peripheral' not in flags,
         'supported': 'unsupported' not in flags,
         'enabled': 'enabled' in flags,
+        'state': 2,
+        'percentage': 50.0,
+        'update_time': int(time.time()),
         'fail': None,
     }
     b['reg_id'] = conn.register_object(path_of(name), device_iface, device_method, device_get_property, None)
@@ -185,6 +202,18 @@ def command(line):
         elif cmd == 'support':
             batteries[args[0]]['supported'] = args[1] == 'on'
             emit_changed(args[0], ChargeThresholdSupported=args[1] == 'on')
+        elif cmd == 'battery-state':
+            batteries[args[0]]['state'] = int(args[1])
+            emit_changed(args[0], State=int(args[1]))
+        elif cmd == 'percentage':
+            batteries[args[0]]['percentage'] = float(args[1])
+            emit_changed(args[0], Percentage=float(args[1]))
+        elif cmd == 'full':
+            batteries[args[0]].update(state=4, percentage=100.0)
+            emit_changed(args[0], State=4, Percentage=100.0)
+        elif cmd == 'touch':
+            batteries[args[0]]['update_time'] = int(time.time())
+            emit_changed(args[0], UpdateTime=batteries[args[0]]['update_time'])
         elif cmd == 'fail':
             batteries[args[0]]['fail'] = ' '.join(args[1:]) or 'Operation is not allowed.'
         elif cmd == 'ok':

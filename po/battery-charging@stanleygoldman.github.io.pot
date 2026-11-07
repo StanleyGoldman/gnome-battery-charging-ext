@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: battery-charging@stanleygoldman.github.io\n"
 "Report-Msgid-Bugs-To: https://github.com/StanleyGoldman/gnome-battery-"
 "charging-ext/issues\n"
-"POT-Creation-Date: 2026-11-06 19:51-0500\n"
+"POT-Creation-Date: 2026-11-06 20:17-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -79,8 +79,14 @@ msgstr ""
 msgid "Could not change %s"
 msgstr ""
 
+#. Translators: notification title, posted when the Full-battery action has switched
+#. Battery Charging to its mode that holds the battery below full to slow its wear.
+#: src/strings.js:64
+msgid "Switched to Preserve Battery Health"
+msgstr ""
+
 #. Translators: notification body. %s is the mode that was refused ("Maximize Charge").
-#: src/strings.js:67
+#: src/strings.js:71
 #, javascript-format
 msgid "Switching to %s is not allowed."
 msgstr ""
@@ -88,7 +94,7 @@ msgstr ""
 #. Translators: notification body when only some batteries refused. %1$s is the
 #. mode ("Maximize Charge"), %2$d how many batteries refused, %3$s their names
 #. (BAT1, or "BAT0, BAT1"). Leave %2$d out of the singular form only in languages where that form means exactly one.
-#: src/strings.js:73
+#: src/strings.js:77
 #, javascript-format
 msgid "Switching to %1$s is not allowed for one battery (%3$s)."
 msgid_plural "Switching to %1$s is not allowed for %2$d batteries (%3$s)."
