@@ -63,6 +63,17 @@ export function createStrings({_, ngettext, dgettext}) {
         // Battery Charging to its mode that holds the battery below full to slow its wear.
         switchedTitle: () => _('Switched to Preserve Battery Health'),
 
+        // Translators: notification title, posted when the battery has stayed fully charged
+        // for a while.
+        fullyChargedTitle: () => _('Battery Fully Charged'),
+
+        // Translators: notification body under "Battery Fully Charged". "Preserve Battery
+        // Health" is GNOME Settings' name for the mode that holds the battery below full.
+        fullyChargedBody: () => _('Switch to Preserve Battery Health to slow battery wear.'),
+
+        // Translators: a button on the "Battery Fully Charged" notification: show it again later.
+        remindLater: () => _('Remind Me Later'),
+
         // `failedNames` is empty when the failure covers every battery, or the only one.
         failedBody(preserve, failedNames) {
             const mode = modeName(preserve);

@@ -16,7 +16,7 @@ const english = createStrings({
 
 // One supporting battery (Full unless said otherwise), the model, the action and its
 // clock, and a record of what the action reported.
-async function setUp({devices = [battery(FULL)], action = 'switch', fullWait = 30} = {}) {
+async function setUp({devices = [battery(FULL)], action = 'switch', fullWait = 30, renotifyInterval = 60} = {}) {
     const upower = new FakeUPower({devices});
     // Replies to switches change the battery, as UPower does.
     const set = upower.setChargeThreshold.bind(upower);
@@ -29,11 +29,17 @@ async function setUp({devices = [battery(FULL)], action = 'switch', fullWait = 3
     const model = new BatteryChargingModel(upower, english);
     await settle();
     const clock = new FakeClock();
-    const settings = {action, fullWait, renotifyInterval: 60};
+    const settings = {action, fullWait, renotifyInterval};
     const fullBattery = new FullBatteryAction(model, english, clock, settings);
     const switched = [];
     fullBattery.connect('switched', (_a, title) => switched.push(title));
-    return {upower, model, clock, fullBattery, switched, bat: devices[0]};
+    // The Notify notification's life: each post or re-show, with its buttons, and each withdrawal.
+    const notifications = [];
+    fullBattery.connect('notification-posted', (_a, title, body, remindLater) =>
+        notifications.push({at: clock.now(), title, body, remindLater})
+    );
+    fullBattery.connect('notification-withdrawn', () => notifications.push('withdrawn'));
+    return {upower, model, clock, fullBattery, switched, notifications, bat: devices[0]};
 }
 
 // Advances the clock, then lets the switch replies through.
@@ -381,4 +387,251 @@ test('when a Preserve Battery Health click that superseded the automatic switch 
 
     assertEqual(upower.setCalls.length, 3, 'switch calls');
     assertEqual(switched, ['Switched to Preserve Battery Health'], 'notices');
+});
+
+// Notify (docs/spec.md §5).
+
+const notifySettings = (fullWait = 30, renotifyInterval = 60) => ({action: 'notify', fullWait, renotifyInterval});
+
+const FULLY_CHARGED = {
+    title: 'Battery Fully Charged',
+    body: 'Switch to Preserve Battery Health to slow battery wear.',
+    remindLater: true,
+};
+
+test('Notify posts the notification once the wait is up, with both buttons', async () => {
+    const {clock, notifications} = await setUp({action: 'notify', fullWait: 30});
+    const start = clock.now();
+
+    await advance(clock, 30 * MINUTE - 1);
+    assertEqual(notifications, [], 'nothing before the wait is up');
+
+    await advance(clock, 1);
+    assertEqual(notifications, [{at: start + 30 * MINUTE, ...FULLY_CHARGED}], 'notifications');
+});
+
+test('Notify shows the notification again every re-notify interval while Full', async () => {
+    const {clock, notifications} = await setUp({action: 'notify', fullWait: 30, renotifyInterval: 60});
+    const start = clock.now();
+
+    await advance(clock, 30 * MINUTE + 180 * MINUTE);
+
+    assertEqual(
+        notifications.map(n => n.at - start),
+        [30, 90, 150, 210].map(m => m * MINUTE),
+        'shown at, after Full began'
+    );
+});
+
+test('a re-notify interval changed mid-cycle counts the time since the last notification', async () => {
+    const {clock, fullBattery, notifications} = await setUp({action: 'notify', fullWait: 30, renotifyInterval: 60});
+    const start = clock.now();
+
+    await advance(clock, 30 * MINUTE + 40 * MINUTE);
+    fullBattery.update(notifySettings(30, 30));
+    assertEqual(notifications.length, 1, 'not inside the settings handler');
+    await advance(clock, 0);
+    fullBattery.update(notifySettings(30, 90));
+    await advance(clock, 90 * MINUTE);
+
+    assertEqual(
+        notifications.map(n => n.at - start),
+        [30, 70, 160].map(m => m * MINUTE),
+        'shown at, after Full began'
+    );
+});
+
+test('the notification is withdrawn when Full breaks, and the next Full starts a fresh wait', async () => {
+    const {upower, clock, notifications, bat} = await setUp({action: 'notify', fullWait: 30});
+    const start = clock.now();
+
+    await advance(clock, 40 * MINUTE);
+    upower.change(bat, {state: DeviceState.DISCHARGING, percentage: 99});
+    await advance(clock, 120 * MINUTE);
+    upower.change(bat, {state: DeviceState.FULLY_CHARGED, percentage: 100});
+    await advance(clock, 30 * MINUTE);
+
+    assertEqual(
+        notifications.map(n => (n === 'withdrawn' ? n : n.at - start)),
+        [30 * MINUTE, 'withdrawn', 190 * MINUTE],
+        'notifications'
+    );
+});
+
+for (const [action, name] of [
+    ['off', 'Off'],
+    ['switch', 'Switch automatically'],
+]) {
+    test(`the notification is withdrawn when the action changes to ${name}`, async () => {
+        const {clock, fullBattery, notifications} = await setUp({action: 'notify', fullWait: 30});
+
+        await advance(clock, 40 * MINUTE);
+        fullBattery.update({action, fullWait: 30, renotifyInterval: 60});
+        await advance(clock, 120 * MINUTE);
+
+        assertEqual(notifications.slice(1), ['withdrawn'], 'notifications after the change');
+    });
+}
+
+test('destroy withdraws the notification and ends the cycle', async () => {
+    const {clock, fullBattery, notifications} = await setUp({action: 'notify', fullWait: 30});
+
+    await advance(clock, 40 * MINUTE);
+    fullBattery.destroy();
+    await advance(clock, 120 * MINUTE);
+
+    assertEqual([notifications.slice(1), clock.pendingTimers], [['withdrawn'], 0], 'notifications, timers');
+});
+
+test('a dismiss stops the reminders until the next full charge', async () => {
+    const {upower, clock, fullBattery, notifications, bat} = await setUp({action: 'notify', fullWait: 30});
+    const start = clock.now();
+
+    await advance(clock, 40 * MINUTE);
+    fullBattery.dismissed();
+    await advance(clock, 300 * MINUTE);
+    assertEqual(notifications.length, 1, 'notifications while still Full');
+
+    upower.change(bat, {state: DeviceState.DISCHARGING, percentage: 99});
+    upower.change(bat, {state: DeviceState.FULLY_CHARGED, percentage: 100});
+    await advance(clock, 30 * MINUTE);
+    // Dismissed, so nothing is out to withdraw when Full breaks.
+    assertEqual(
+        notifications.map(n => n.at - start),
+        [30, 370].map(m => m * MINUTE),
+        'shown at, after Full first began'
+    );
+});
+
+test('Remind Me Later shows the notification again one interval after the click', async () => {
+    const {clock, fullBattery, notifications} = await setUp({action: 'notify', fullWait: 30, renotifyInterval: 60});
+    const start = clock.now();
+
+    await advance(clock, 70 * MINUTE);
+    fullBattery.remindLater();
+    await advance(clock, 60 * MINUTE);
+
+    // The closed notification isn't withdrawn: the shell already took it down.
+    assertEqual(
+        notifications.map(n => n.at - start),
+        [30, 130].map(m => m * MINUTE),
+        'shown at, after Full began'
+    );
+});
+
+test('with the re-notify interval at 0, Notify posts once, without Remind Me Later', async () => {
+    const {clock, notifications} = await setUp({action: 'notify', fullWait: 30, renotifyInterval: 0});
+
+    await advance(clock, 24 * 60 * MINUTE);
+
+    assertEqual(
+        [notifications.map(n => n.remindLater), clock.pendingTimers],
+        [[false], 0],
+        'Remind Me Later per notification, timers'
+    );
+});
+
+test('the Preserve Battery Health button switches, and the cycle ends', async () => {
+    const {upower, model, clock, fullBattery, notifications, bat} = await setUp({action: 'notify', fullWait: 30});
+
+    await advance(clock, 40 * MINUTE);
+    fullBattery.preserve();
+    await advance(clock, 300 * MINUTE);
+
+    assertEqual([upower.setCalls, model.lit], [[[bat.path, true]], true], 'switch calls, lit');
+    assertEqual([notifications.length, clock.pendingTimers], [1, 0], 'notifications, timers');
+});
+
+test('a failed Preserve Battery Health button carries on as Remind Me Later', async () => {
+    const {upower, model, clock, fullBattery, notifications, bat} = await setUp({
+        action: 'notify',
+        fullWait: 30,
+        renotifyInterval: 60,
+    });
+    const start = clock.now();
+    upower.failSets.add(bat.path);
+    const failures = [];
+    model.connect('failed', (_m, title) => failures.push(title));
+
+    await advance(clock, 40 * MINUTE);
+    fullBattery.preserve();
+    await settle();
+    await advance(clock, 60 * MINUTE);
+
+    assertEqual(failures, ['Could not change Battery Charging'], 'failures');
+    assertEqual(
+        notifications.map(n => n.at - start),
+        [30, 100].map(m => m * MINUTE),
+        'shown at, after Full began'
+    );
+});
+
+test('a failed Preserve Battery Health button with the interval at 0 ends the cycle', async () => {
+    const {upower, clock, fullBattery, notifications, bat} = await setUp({
+        action: 'notify',
+        fullWait: 30,
+        renotifyInterval: 0,
+    });
+    upower.failSets.add(bat.path);
+
+    await advance(clock, 40 * MINUTE);
+    fullBattery.preserve();
+    await advance(clock, 0);
+    // Even a longer interval set afterwards brings no reminder this full charge.
+    fullBattery.update(notifySettings(30, 60));
+    await advance(clock, 300 * MINUTE);
+
+    assertEqual([notifications.length, clock.pendingTimers], [1, 0], 'notifications, timers');
+});
+
+test('after a dismiss, changing to Switch automatically clears the flag and switches at once', async () => {
+    const {upower, clock, fullBattery} = await setUp({action: 'notify', fullWait: 30});
+
+    await advance(clock, 40 * MINUTE);
+    fullBattery.dismissed();
+    fullBattery.update(settingsFor('switch'));
+    await advance(clock, 0);
+
+    assertEqual(upower.setCalls.length, 1, 'switch calls');
+});
+
+test('changing from Switch automatically to Notify keeps the time spent Full', async () => {
+    const {clock, fullBattery, notifications} = await setUp({action: 'switch', fullWait: 30});
+    const start = clock.now();
+
+    await advance(clock, 20 * MINUTE);
+    fullBattery.update(notifySettings());
+    await advance(clock, 10 * MINUTE);
+
+    assertEqual(
+        notifications.map(n => n.at - start),
+        [30 * MINUTE],
+        'shown at, after Full began'
+    );
+});
+
+test('changing from Off to Notify starts a fresh wait', async () => {
+    const {clock, fullBattery, notifications} = await setUp({action: 'off', fullWait: 30});
+    const start = clock.now();
+
+    await advance(clock, 40 * MINUTE);
+    fullBattery.update(notifySettings());
+    await advance(clock, 30 * MINUTE);
+
+    assertEqual(
+        notifications.map(n => n.at - start),
+        [70 * MINUTE],
+        'shown at, after Full began'
+    );
+});
+
+test('a Maximize Charge click after the notification stops the reminders and leaves it out', async () => {
+    const {upower, model, clock, notifications, bat} = await setUp({action: 'notify', fullWait: 30});
+
+    await advance(clock, 40 * MINUTE);
+    model.switchTo(false);
+    await advance(clock, 300 * MINUTE);
+
+    assertEqual(upower.setCalls, [[bat.path, false]], 'switch calls');
+    assertEqual(notifications.length, 1, 'notifications');
 });
