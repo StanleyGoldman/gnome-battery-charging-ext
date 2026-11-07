@@ -59,6 +59,10 @@ export function createStrings({_, ngettext, dgettext}) {
         // Translators: notification title. %s is the setting's name ("Battery Charging").
         failedTitle: () => format(_('Could not change %s'), batteryCharging),
 
+        // Translators: notification title, posted when the Full-battery action has switched
+        // Battery Charging to its mode that holds the battery below full to slow its wear.
+        switchedTitle: () => _('Switched to Preserve Battery Health'),
+
         // `failedNames` is empty when the failure covers every battery, or the only one.
         failedBody(preserve, failedNames) {
             const mode = modeName(preserve);

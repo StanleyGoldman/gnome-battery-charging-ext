@@ -1,5 +1,6 @@
 import {test, assertEqual} from './harness.js';
 import {settle} from './harness.js';
+import {DeviceState} from './fakeUPower.js';
 
 import {UPowerClient} from '../../src/upower.js';
 
@@ -84,6 +85,8 @@ function devProxy(props = {}) {
         PowerSupply: true,
         ChargeThresholdSupported: true,
         ChargeThresholdEnabled: false,
+        State: DeviceState.DISCHARGING,
+        Percentage: 50,
         ...props,
     });
 }
@@ -280,4 +283,19 @@ test('a changed device reports the changed property names', async () => {
     await settle();
     proxy.fire('g-properties-changed', {deepUnpack: () => ({ChargeThresholdEnabled: true})});
     assertEqual(log, [[PATH, ['ChargeThresholdEnabled']]], 'signals');
+});
+
+test('a device carries its State and Percentage, read live from the proxy', async () => {
+    const bus = new FakeBus();
+    const client = await readyClient(bus);
+    const added = [];
+    client.connect('device-added', device => added.push(device));
+    bus.upower.fire('DeviceAdded', [PATH]);
+    const proxy = devProxy({State: DeviceState.CHARGING, Percentage: 99});
+    bus.resolve('device', PATH, proxy);
+    await settle();
+    assertEqual([added[0].state, added[0].percentage], [DeviceState.CHARGING, 99], 'state, percentage');
+    proxy.State = DeviceState.FULLY_CHARGED;
+    proxy.Percentage = 100;
+    assertEqual([added[0].state, added[0].percentage], [DeviceState.FULLY_CHARGED, 100], 'after a change');
 });
