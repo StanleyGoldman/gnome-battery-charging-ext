@@ -2,8 +2,10 @@ UUID := battery-charging@stanleygoldman.github.io
 ZIP := dist/$(UUID).shell-extension.zip
 ICONS := $(wildcard src/icons/*.svg)
 POT := po/$(UUID).pot
-SOURCES := $(wildcard src/*.js src/metadata.json) $(ICONS)
-EXTRA_SOURCES := $(filter-out src/extension.js,$(wildcard src/*.js))
+SCHEMAS := $(wildcard src/schemas/*.gschema.xml)
+SOURCES := $(wildcard src/*.js src/metadata.json) $(ICONS) $(SCHEMAS)
+# gnome-extensions pack adds extension.js, prefs.js and schemas/ by itself.
+EXTRA_SOURCES := $(filter-out src/extension.js src/prefs.js,$(wildcard src/*.js))
 UNIT_TESTS := $(wildcard tests/unit/*.test.js)
 INSTALL_DIR := $(or $(XDG_DATA_HOME),$(HOME)/.local/share)/gnome-shell/extensions/$(UUID)
 SH_FILES := $(wildcard scripts/*.sh tests/*/*.sh .github/*.sh)
@@ -15,9 +17,10 @@ COVERAGE_DIR := dist/coverage
 .PHONY: test coverage test-integration screenshots pack pot install uninstall check-deps \
 	lint lint-js lint-sh lint-py lint-actions format typos ci ci-image ci-docker
 
-## Run the unit tests.
+## Run the unit tests and the schema's strict dry-run compile.
 test:
 	gjs -m tests/unit/run.js $(UNIT_TESTS)
+	glib-compile-schemas --strict --dry-run src/schemas
 
 ## Run the unit tests with coverage of src/: writes $(COVERAGE_DIR)/coverage.lcov, an HTML
 ## report in $(COVERAGE_DIR)/html and the Markdown summary.md. BASE=<commit> adds the share

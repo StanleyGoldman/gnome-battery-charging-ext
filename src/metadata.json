@@ -4,5 +4,6 @@
   "description": "Switch Battery Charging between Maximize Charge and Preserve Battery Health from Quick Settings.",
   "shell-version": ["50"],
   "gettext-domain": "battery-charging@stanleygoldman.github.io",
+  "settings-schema": "org.gnome.shell.extensions.battery-charging",
   "url": "https://github.com/StanleyGoldman/gnome-battery-charging-ext"
 }

@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: battery-charging@stanleygoldman.github.io\n"
 "Report-Msgid-Bugs-To: https://github.com/StanleyGoldman/gnome-battery-"
 "charging-ext/issues\n"
-"POT-Creation-Date: 2026-10-13 14:00-0400\n"
+"POT-Creation-Date: 2026-11-06 19:48-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,36 +19,68 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
+#: src/prefs.js:35
+msgid "When Fully Charged"
+msgstr ""
+
+#: src/prefs.js:36
+msgid "Do Nothing"
+msgstr ""
+
+#: src/prefs.js:36
+msgid "Notify"
+msgstr ""
+
+#: src/prefs.js:36
+msgid "Switch to Preserve Battery Health"
+msgstr ""
+
+#: src/prefs.js:41
+msgid "Wait Before Acting"
+msgstr ""
+
+#: src/prefs.js:42
+msgid "Minutes the battery stays fully charged first; 0 acts at once"
+msgstr ""
+
+#: src/prefs.js:48
+msgid "Minutes between notifications; 0 notifies once"
+msgstr ""
+
+#: src/prefs.js:48
+msgid "Remind Every"
+msgstr ""
+
 #. Translators: toggle title, at most about 10 characters; "Battery Charging" is the full name.
-#: src/strings.js:40
+#: src/strings.js:36
 msgid "Battery"
 msgstr ""
 
 #. Translators: toggle subtitle for the mode that lets the battery charge to full; at most about 10 characters.
-#: src/strings.js:42
+#: src/strings.js:38
 msgid "Maximize"
 msgstr ""
 
 #. Translators: toggle subtitle for the mode that holds the battery below full to slow its wear; at most about 10 characters.
-#: src/strings.js:44
+#: src/strings.js:40
 msgid "Preserve"
 msgstr ""
 
 #. Translators: the toggle's accessible name. The first %s is the setting's name
 #. ("Battery Charging"), the second its current mode ("Maximize Charge").
-#: src/strings.js:61
+#: src/strings.js:57
 #, javascript-format
 msgid "%s: %s"
 msgstr ""
 
 #. Translators: notification title. %s is the setting's name ("Battery Charging").
-#: src/strings.js:64
+#: src/strings.js:60
 #, javascript-format
 msgid "Could not change %s"
 msgstr ""
 
 #. Translators: notification body. %s is the mode that was refused ("Maximize Charge").
-#: src/strings.js:71
+#: src/strings.js:67
 #, javascript-format
 msgid "Switching to %s is not allowed."
 msgstr ""
@@ -56,7 +88,7 @@ msgstr ""
 #. Translators: notification body when only some batteries refused. %1$s is the
 #. mode ("Maximize Charge"), %2$d how many batteries refused, %3$s their names
 #. (BAT1, or "BAT0, BAT1"). Leave %2$d out of the singular form only in languages where that form means exactly one.
-#: src/strings.js:77
+#: src/strings.js:73
 #, javascript-format
 msgid "Switching to %1$s is not allowed for one battery (%3$s)."
 msgid_plural "Switching to %1$s is not allowed for %2$d batteries (%3$s)."

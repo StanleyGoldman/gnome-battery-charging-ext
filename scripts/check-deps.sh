@@ -13,6 +13,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 have gjs || missing+=("gjs: gjs")
 have gnome-extensions || missing+=("gnome-extensions: gnome-shell")
 have xgettext || missing+=("xgettext: gettext")
+have glib-compile-schemas || missing+=("glib-compile-schemas: libglib2.0-bin")
 python3 -c 'import gi' >/dev/null 2>&1 || missing+=("python3-gi: python3-gi")
 have dbus-run-session || missing+=("dbus-run-session: dbus")
 # The integration tests check German strings borrowed from GNOME Settings.

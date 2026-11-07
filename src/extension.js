@@ -6,22 +6,16 @@ import {Extension, gettext as _, ngettext} from 'resource:///org/gnome/shell/ext
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
-import {PACKAGE_VERSION} from 'resource:///org/gnome/shell/misc/config.js';
 
 import {BatteryChargingModel} from './model.js';
 import {createStrings} from './strings.js';
 import {UPowerClient} from './upower.js';
 
-const SHELL_MAJOR = parseInt(PACKAGE_VERSION.split('.')[0]);
-
 const BatteryChargingToggle = GObject.registerClass(
     // eslint-disable-next-line no-shadow -- registerClass names the GType after the class, so the names match.
     class BatteryChargingToggle extends QuickMenuToggle {
         constructor(extension, model, strings) {
-            const params = {title: strings.title};
-            // 49+ only: an unknown construct property throws on 48.
-            if (SHELL_MAJOR >= 49) params.menuButtonAccessibleName = model.accessibleName;
-            super(params);
+            super({title: strings.title, menuButtonAccessibleName: model.accessibleName});
 
             this._model = model;
             this.preserveIcon = this._icon(extension, 'battery-preserve-health-symbolic.svg');
@@ -59,7 +53,7 @@ const BatteryChargingToggle = GObject.registerClass(
             this.subtitle = this._model.subtitle;
             this.accessible_name = this._model.accessibleName;
             // The menu button gets the same name as the toggle: it opens that toggle's menu.
-            if (SHELL_MAJOR >= 49) this.menuButtonAccessibleName = this._model.accessibleName;
+            this.menuButtonAccessibleName = this._model.accessibleName;
             this.gicon = lit ? this.preserveIcon : this.maximizeIcon;
             this.preserveItem.setOrnament(lit ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
             this.maximizeItem.setOrnament(lit ? PopupMenu.Ornament.NONE : PopupMenu.Ornament.CHECK);
@@ -75,17 +69,15 @@ const BatteryChargingIndicator = GObject.registerClass(
             this._toggle = new BatteryChargingToggle(extension, model, strings);
             this.quickSettingsItems.push(this._toggle);
 
-            // Like Power Mode, 50+ only: a top-bar icon while Preserve Battery Health is on.
-            if (SHELL_MAJOR >= 50) {
-                const icon = this._addIndicator();
-                icon.gicon = this._toggle.preserveIcon;
-                const sync = () => {
-                    icon.visible = this._toggle.visible && this._toggle.checked;
-                };
-                this._toggle.connect('notify::visible', sync);
-                this._toggle.connect('notify::checked', sync);
-                sync();
-            }
+            // Like Power Mode: a top-bar icon while Preserve Battery Health is on.
+            const icon = this._addIndicator();
+            icon.gicon = this._toggle.preserveIcon;
+            const sync = () => {
+                icon.visible = this._toggle.visible && this._toggle.checked;
+            };
+            this._toggle.connect('notify::visible', sync);
+            this._toggle.connect('notify::checked', sync);
+            sync();
         }
     }
 );
