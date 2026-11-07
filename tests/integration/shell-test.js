@@ -1,5 +1,5 @@
-// Integration tests 1 to 8 and 11 (docs/spec.md §8), run inside a headless GNOME
-// Shell by tests/integration/run.sh. Tests 1 to 6, 8 and 11 run in an English shell, test 7
+// Integration tests 1 to 8, 11 and 12 (docs/spec.md §8), run inside a headless GNOME
+// Shell by tests/integration/run.sh. Tests 1 to 6, 8, 11 and 12 run in an English shell, test 7
 // in a German one ($BATTERY_CHARGING_TEST_PASS says which). run.sh sets
 // BATTERY_CHARGING_MINUTE_MS=1000, so a settings minute lasts a second. The mock UPower is driven through its FIFO
 // ($BATTERY_CHARGING_MOCK_FIFO) and logs to $BATTERY_CHARGING_MOCK_LOG.
@@ -270,6 +270,46 @@ const ENGLISH_TESTS = [
                 assert(notice.actions.length === 0, `the notice has ${notice.actions.length} buttons`);
                 notice.destroy(MessageTray.NotificationDestroyedReason.DISMISSED);
             } finally {
+                settings.reset('full-battery-action');
+                settings.reset('full-wait');
+            }
+        },
+    ],
+    [
+        '12 survives a lock',
+        async () => {
+            const settings = extensionSettings();
+            // Long enough that the lock lands before the wait expires.
+            settings.set_uint('full-wait', 3);
+            settings.set_string('full-battery-action', 'switch');
+            try {
+                const toggle = findToggle();
+                const before = mockLog().length;
+                await makeFull(toggle);
+                Main.screenShield.lock(false);
+                await waitFor('the lock screen', () => Main.sessionMode.currentMode === 'unlock-dialog');
+                const state = Main.extensionManager.lookup(UUID).state;
+                assert(state === 1, `the extension's state is ${state} while locked, expected 1 (enabled)`);
+                assert(findToggle() === toggle, 'the toggle was rebuilt by the lock');
+                assert(!toggle.visible, 'the toggle is shown on the lock screen');
+                assert(!topBarIcon().visible, 'the top-bar icon is shown on the lock screen');
+                assert(
+                    !mockLog().slice(before).includes('EnableChargeThreshold(true)'),
+                    'the wait expired before the lock'
+                );
+                await waitFor('EnableChargeThreshold(true) while locked', () =>
+                    mockLog().slice(before).includes('EnableChargeThreshold(true) on BAT0')
+                );
+                assert(Main.sessionMode.currentMode === 'unlock-dialog', 'the screen unlocked during the wait');
+                // The notice goes through the tray as usual; this test is about the switch.
+                ownSource()?.destroy(MessageTray.NotificationDestroyedReason.SOURCE_CLOSED);
+                Main.screenShield.deactivate(false);
+                await waitFor('the unlock', () => Main.sessionMode.currentMode === 'user');
+                await waitFor('the toggle to return', () => findToggle()?.visible);
+                assertToggle(findToggle(), {visible: true, checked: true});
+                assertTopBar(true);
+            } finally {
+                if (Main.sessionMode.currentMode === 'unlock-dialog') Main.screenShield.deactivate(false);
                 settings.reset('full-battery-action');
                 settings.reset('full-wait');
             }

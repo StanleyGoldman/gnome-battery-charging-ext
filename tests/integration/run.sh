@@ -76,7 +76,7 @@ check_pass() {
 
 run_pass english en
 run_pass german de
-check_pass english 8
+check_pass english 9
 check_pass german 1
-[[ $failed -eq 0 ]] && echo "All 9 integration tests passed."
+[[ $failed -eq 0 ]] && echo "All 10 integration tests passed."
 exit $failed
