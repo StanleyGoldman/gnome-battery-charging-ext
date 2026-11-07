@@ -1,7 +1,7 @@
 {
   "uuid": "battery-charging@stanleygoldman.github.io",
   "name": "Battery Charging",
-  "description": "Switch Battery Charging between Maximize Charge and Preserve Battery Health from Quick Settings.",
+  "description": "Switch Battery Charging between Maximize Charge and Preserve Battery Health from Quick Settings. Optionally, once the battery has stayed full for a while, it can remind you to switch to Preserve Battery Health or switch for you.",
   "shell-version": ["50"],
   "session-modes": ["user", "unlock-dialog"],
   "gettext-domain": "battery-charging@stanleygoldman.github.io",
