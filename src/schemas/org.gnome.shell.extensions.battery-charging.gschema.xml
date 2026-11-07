@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <enum id="org.gnome.shell.extensions.battery-charging.FullBatteryAction">
+    <value nick="off" value="0"/>
+    <value nick="notify" value="1"/>
+    <value nick="switch" value="2"/>
+  </enum>
+
+  <schema id="org.gnome.shell.extensions.battery-charging" path="/org/gnome/shell/extensions/battery-charging/">
+    <!-- A key never changes its type or meaning: add a new key instead (spec §5). -->
+    <key name="full-battery-action" enum="org.gnome.shell.extensions.battery-charging.FullBatteryAction">
+      <default>'off'</default>
+      <summary>Full-battery action</summary>
+      <description>What happens once the battery has stayed full for full-wait minutes: off (nothing), notify (offer to switch to Preserve Battery Health) or switch (switch to Preserve Battery Health).</description>
+    </key>
+    <key name="full-wait" type="u">
+      <range min="0" max="1440"/>
+      <default>30</default>
+      <summary>Wait before the Full-battery action, in minutes</summary>
+      <description>How long the battery stays full before the Full-battery action runs. 0 acts as soon as it is full.</description>
+    </key>
+    <key name="renotify-interval" type="u">
+      <range min="0" max="1440"/>
+      <default>60</default>
+      <summary>Re-notify interval, in minutes</summary>
+      <description>Notify only: the time from one notification to the next. 0 notifies once, with no reminders.</description>
+    </key>
+  </schema>
+</schemalist>

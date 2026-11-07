@@ -85,3 +85,13 @@ on BAT0`) to see which calls arrived. `return` is a no-op while the mock still o
 - **`make test-integration` runs two shells**, one per language (the language is fixed at shell start): English for tests 1 to 6, `LANGUAGE=de` for test 7. Each writes `dist/integration/<pass>.log`.
 - **`LANGUAGE` only works under a generated non-C locale**, so `run.sh` sets `LANG=en_US.UTF-8`.
 - **`gnome-extensions pack --podir` is relative to the source directory** (`src`), so the Makefile passes `--podir=../po`.
+
+## Checking `prefs.js` without the shell
+
+`scripts/prefs-smoke.js` builds the preferences window in plain `gjs` and prints each row's title, value and sensitivity; its header has the command. Run it under `GSETTINGS_BACKEND=memory` so nothing reaches the user's dconf. What it works around:
+
+- `ExtensionPreferences` lives in `/usr/share/gnome-shell/org.gnome.Shell.Extensions.src.gresource`, which the script registers.
+- That module imports the private `Shew` typelib: set `GI_TYPELIB_PATH=/usr/lib/gnome-shell/girepository-1.0` and `LD_LIBRARY_PATH=/usr/lib/gnome-shell`.
+- The `gettext` that `prefs.js` imports finds its extension through the app's extension manager, which is empty here (`url is null` in `lookupByURL`); the script points `lookupByURL` at its own instance.
+
+It covers the rows and the two-way sync with the settings, not persistence across runs. The release checklist still opens the real window.

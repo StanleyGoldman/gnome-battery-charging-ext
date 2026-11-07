@@ -14,7 +14,6 @@ import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Scripting from 'resource:///org/gnome/shell/ui/scripting.js';
-import {PACKAGE_VERSION} from 'resource:///org/gnome/shell/misc/config.js';
 
 const UUID = 'battery-charging@stanleygoldman.github.io';
 const OUT = GLib.getenv('BATTERY_CHARGING_TEST_OUT') ?? '/tmp';
@@ -88,7 +87,6 @@ function assertToggle(toggle, {visible, checked}) {
 
 function assertTopBar(shown) {
     const icon = topBarIcon();
-    if (parseInt(PACKAGE_VERSION) < 50) return;
     assert(icon !== null, 'no top-bar icon');
     assert(icon.visible === shown, `top-bar icon visible is ${icon.visible}, expected ${shown}`);
     if (shown)
