@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: battery-charging@stanleygoldman.github.io\n"
 "Report-Msgid-Bugs-To: https://github.com/StanleyGoldman/gnome-battery-"
 "charging-ext/issues\n"
-"POT-Creation-Date: 2026-11-07 07:24-0500\n"
+"POT-Creation-Date: 2026-11-07 09:13-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,35 +19,51 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: src/prefs.js:29
+#: src/prefs.js:30
 msgid "Do Nothing"
 msgstr ""
 
-#: src/prefs.js:30
+#: src/prefs.js:31
 msgid "Notify"
 msgstr ""
 
-#: src/prefs.js:31
+#: src/prefs.js:32
 msgid "Switch to Preserve Battery Health"
 msgstr ""
 
-#: src/prefs.js:40
+#: src/prefs.js:36
+msgid "Top Bar"
+msgstr ""
+
+#: src/prefs.js:38
+msgid "Full Battery"
+msgstr ""
+
+#: src/prefs.js:43
+msgid "Show Top-Bar Icon"
+msgstr ""
+
+#: src/prefs.js:44
+msgid "While Preserve Battery Health is on"
+msgstr ""
+
+#: src/prefs.js:50
 msgid "When Fully Charged"
 msgstr ""
 
-#: src/prefs.js:46
+#: src/prefs.js:56
 msgid "Wait Before Acting"
 msgstr ""
 
-#: src/prefs.js:47
+#: src/prefs.js:57
 msgid "Minutes the battery stays fully charged first; 0 acts at once"
 msgstr ""
 
-#: src/prefs.js:52
+#: src/prefs.js:62
 msgid "Minutes between notifications; 0 notifies once"
 msgstr ""
 
-#: src/prefs.js:52
+#: src/prefs.js:62
 msgid "Remind Every"
 msgstr ""
 

@@ -25,5 +25,10 @@
       <summary>Re-notify interval, in minutes</summary>
       <description>Notify only: the time from one notification to the next. 0 notifies once, with no reminders.</description>
     </key>
+    <key name="show-top-bar-icon" type="b">
+      <default>true</default>
+      <summary>Show the top-bar icon</summary>
+      <description>Whether the top bar shows the extension's icon while Preserve Battery Health is on. It never shows on the lock screen.</description>
+    </key>
   </schema>
 </schemalist>

@@ -7,7 +7,7 @@ What to build. Each section ends with the issues that hold the reasoning; this f
 A GNOME Shell extension that switches **Battery Charging** between **Maximize Charge** and **Preserve Battery Health** from Quick Settings, modelled on the built-in Power Mode toggle. Its **Full-battery action** can also offer, or make, the switch to Preserve Battery Health once the battery has stayed **Full** for a while (§5).
 
 - The Battery Charging state lives in UPower, on each battery device. GNOME Settings' Power page uses the same state, so the two always agree. The extension never stores it.
-- The extension's own settings are the Full-battery action and its two timings (§5), kept in GSettings and edited in a preferences window. Quick Settings is unchanged by them.
+- The extension's own settings are the Full-battery action and its two timings, and whether to show the top-bar icon (§5), kept in GSettings and edited in a preferences window. Quick Settings is unchanged by them.
 - It keeps running on the lock screen, so the Full-battery action can fire while locked (§5, §9).
 - It's for personal use, written to pass extensions.gnome.org review.
 - Positioning is out of scope: the toggle and top-bar icon take the shell's default places through `addExternalIndicator()`. Users reorder them with an extension such as Quick Settings Tweaks.
@@ -28,9 +28,9 @@ Source: #4, #15, #54.
 - `checked` comes from UPower state, not `toggleMode`. Lit means Preserve Battery Health.
 - Clicking the toggle switches modes (§4).
 - The menu: `menu.setHeader(icon, title)` with no subtitle, then a `PopupMenuSection` checklist of two `PopupImageMenuItem`s (the current mode gets `Ornament.CHECK`, the other `Ornament.NONE`), then a `PopupSeparatorMenuItem` and `menu.addSettingsAction(<"Power Settings">, 'gnome-power-panel.desktop')`.
-- The indicator shows its top-bar icon while Preserve Battery Health is on, and none otherwise.
+- The indicator shows its top-bar icon while Preserve Battery Health is on and `show-top-bar-icon` (§5) is true, and none otherwise. It follows `changed::show-top-bar-icon` at once, with no re-enable.
 
-**Visibility.** The toggle (and the top-bar icon) is shown while at least one **supporting battery** exists, and hidden otherwise, with no error. The toggle is never hidden or greyed out because the session is inactive or remote. On the lock screen (`Main.sessionMode.currentMode == 'unlock-dialog'`) both are hidden; they come back on unlock.
+**Visibility.** The toggle (and the top-bar icon, if `show-top-bar-icon` allows) is shown while at least one **supporting battery** exists, and hidden otherwise, with no error. The toggle is never hidden or greyed out because the session is inactive or remote. On the lock screen (`Main.sessionMode.currentMode == 'unlock-dialog'`) both are hidden; they come back on unlock.
 
 **Icons.** Bundled symbolic SVGs (`*-symbolic.svg`, loaded with `Gio.FileIcon`; the shell recolours them like theme icons):
 - A battery outline with a **heart**: Preserve Battery Health. It's also used for the menu header and the top-bar icon.
@@ -50,7 +50,7 @@ Source: #4, #15, #54.
 
 The short labels are display text, not domain terms. §6 says where each string's translation comes from.
 
-Source: #4, #5, #8, #62.
+Source: #4, #5, #8, #62, #88.
 
 ## 4. Behaviour
 
@@ -86,7 +86,7 @@ Source: #4, #5, #8, #62.
 
 Source: #3, #7, #8, #53, #56.
 
-## 5. Full-battery action
+## 5. Settings and the Full-battery action
 
 **Settings.** One GSettings schema, `org.gnome.shell.extensions.battery-charging`, at path `/org/gnome/shell/extensions/battery-charging/`:
 
@@ -95,11 +95,15 @@ Source: #3, #7, #8, #53, #56.
 | `full-battery-action` | enum, nicks `off` / `notify` / `switch` | `off` | | The **Full-battery action**: Off, Notify or Switch automatically |
 | `full-wait` | `u`, minutes | 30 | 0–1440 | How long the battery stays Full before the action fires. Shared by Notify and Switch automatically. 0 acts as soon as it is Full. |
 | `renotify-interval` | `u`, minutes | 60 | 0–1440 | Notify only: the time from one notification to the next. 0 notifies once, with no reminders. |
+| `show-top-bar-icon` | `b` | `true` | | Whether the top-bar icon (§3) shows while Preserve Battery Health is on. It never shows on the lock screen, whatever the key says. |
 
-- Unset keys serve their defaults, so an upgraded install behaves as before (Off). There is no migration code, now or later: a key never changes its type or meaning; if one must, add a new key and leave the old one unread.
+- Unset keys serve their defaults, so an upgraded install behaves as before (Off, top-bar icon shown). There is no migration code, now or later: a key never changes its type or meaning; if one must, add a new key and leave the old one unread.
 - The shell side follows changes through `changed::<key>`.
 
-**Preferences window.** `prefs.js`, an `ExtensionPreferences` whose `fillPreferencesWindow(window)` adds one page and group:
+**Preferences window.** `prefs.js`, an `ExtensionPreferences` whose `fillPreferencesWindow(window)` adds one page with two groups. First **"Top Bar"**:
+- **"Show Top-Bar Icon"**: an `Adw.SwitchRow` with subtitle "While Preserve Battery Health is on", bound to `show-top-bar-icon`. It is the only place the key is set; the Quick Settings menu only picks the mode.
+
+Then **"Full Battery"**:
 - **"When Fully Charged"**: an `Adw.ComboRow` with **Do Nothing** / **Notify** / **Switch to Preserve Battery Health**. An enum key won't `bind()` to `selected`, so sync the row by hand or with `bind_with_mapping`.
 - **The wait**: an `Adw.SpinRow` in minutes, 0–1440, step 5 (any whole number may be typed).
 - **The re-notify interval**: an `Adw.SpinRow` in minutes, 0–1440, whose subtitle says 0 notifies once. It is insensitive unless the action is Notify.
@@ -137,7 +141,7 @@ Source: #3, #7, #8, #53, #56.
 
 **Locking.** `metadata.json` declares `"session-modes": ["user", "unlock-dialog"]`, so the extension stays enabled while locked. The wait, the Notify cycle and the flag survive a lock, and the action fires while locked: Switch automatically switches (its notice is in the list after unlock), and Notify posts as usual, shown on the lock screen per the user's Lock Screen Notifications setting. Only the UI hides (§3). A real `disable()` (the user turns the extension off, logout, shell restart, update) tears down the wait, the notification and the flag, and nothing is persisted; the next `enable()` starts fresh.
 
-Source: #50, #51, #52, #53, #54, #55, #56, #62.
+Source: #50, #51, #52, #53, #54, #55, #56, #62, #88.
 
 ## 6. Translations
 
@@ -204,8 +208,8 @@ Three layers. See `docs/agents/gnome-shell-testing.md` before running a headless
    - This layer is the only one that covers several batteries, the mixed state, last-click-wins, partial failure, vanished batteries, mnemonic stripping and the composed messages. For §5 it is the only one that covers: Full reached as `Charging` at 100 %, `UpdateTime`-only notices ignored, the wait's exact expiry and reset, a wall-clock jump after suspend, a timing changed mid-wait, a body click, a failed switch, a click superseding the automatic switch, and a change of action mid-charge keeping the time spent Full.
 2. **Headless integration tests** with `gnome-shell-test-tool --headless --extension`, against a session-bus UPower mock.
    - They assert on the toggle's actual properties. Screenshots are saved on failure only.
-   - Tests 8–12 set `BATTERY_CHARGING_MINUTE_MS=1000` and change keys through `Gio.Settings`. They act on notifications through the objects, never the banner actors: find the extension's source in `Main.messageTray.getSources()`, read title, urgency and action labels, call an action's callback, and `destroy(DISMISSED)` for ✕. "Shown again" is read from the object (`acknowledged` reset, or replaced).
-   - The twelve tests:
+   - Tests 8–13 set `BATTERY_CHARGING_MINUTE_MS=1000` and change keys through `Gio.Settings`. They act on notifications through the objects, never the banner actors: find the extension's source in `Main.messageTray.getSources()`, read title, urgency and action labels, call an action's callback, and `destroy(DISMISSED)` for ✕. "Shown again" is read from the object (`acknowledged` reset, or replaced).
+   - The thirteen tests:
      1. **Appears and shows state:** shown, lit, subtitle "Preserve", heart icon in the top bar, menu ticked.
      2. **A click switches:** it calls `EnableChargeThreshold(false)` on the mock, and the toggle follows.
      3. **External change:** a change made on the mock (as GNOME Settings would make it) is followed.
@@ -218,6 +222,7 @@ Three layers. See `docs/agents/gnome-shell-testing.md` before running a headless
      10. **Notify dismissed, then a new full charge:** after ✕, no reminder once the interval has passed. The battery leaves Full and becomes Full again, and the notification returns after the wait.
      11. **Switch automatically:** after the wait, `EnableChargeThreshold(true)` is logged, the toggle reads Preserve, and the button-less "Switched to Preserve Battery Health" notice is posted.
      12. **Survives a lock:** Switch automatically with a short wait and the battery Full, then `Main.screenShield.lock(false)`. The extension stays enabled, the toggle is hidden, the wait expires while locked, and `EnableChargeThreshold(true)` is logged. After `Main.screenShield.deactivate(false)` the toggle is back and reads Preserve.
+     13. **The top-bar icon can be hidden:** `show-top-bar-icon` is true by default. Setting it false hides the icon at once in Preserve Battery Health, and it stays hidden through a switch to Maximize Charge and back; the toggle is unaffected. Setting it true shows the icon again, in Preserve Battery Health only. On the lock screen the icon is hidden with the key true.
 3. **Manual checks**, on the dev machine's real battery and system bus, before each release: [`docs/release-checklist.md`](release-checklist.md). They cover what the mock can't: the real battery, a real full charge, the banner's buttons, and the prefs window.
 
 **Layout.**
@@ -227,7 +232,7 @@ Three layers. See `docs/agents/gnome-shell-testing.md` before running a headless
 
 CI runs `make ci`'s checks on every pull request; see the README.
 
-Source: #15, #74.
+Source: #15, #74, #88.
 
 ## 9. Build and packaging
 
@@ -264,7 +269,7 @@ Source: #5, #9, #15, #51, #62.
 ## 10. Out of scope
 
 - Positioning or reordering the toggle and icon (§1).
-- Settings beyond the Full-battery action and its timings (§5), and any Full-battery control in Quick Settings.
+- Settings beyond the Full-battery action, its timings and the top-bar icon switch (§5), and any settings control in Quick Settings.
 - Charge thresholds as numbers: the extension switches the mode only.
 - Automatically aligning a newly arrived battery with the others (§4).
 - Error states inside the toggle's menu; failures go to notifications (§4).

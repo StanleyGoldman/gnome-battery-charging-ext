@@ -36,8 +36,19 @@ test('the schema lives at the extension path', () => {
     assertEqual(loadSchema().get_path(), '/org/gnome/shell/extensions/battery-charging/');
 });
 
-test('the schema has exactly the three Full-battery action keys', () => {
-    assertEqual(loadSchema().list_keys().sort(), ['full-battery-action', 'full-wait', 'renotify-interval']);
+test('the schema has exactly the three Full-battery action keys and show-top-bar-icon', () => {
+    assertEqual(loadSchema().list_keys().sort(), [
+        'full-battery-action',
+        'full-wait',
+        'renotify-interval',
+        'show-top-bar-icon',
+    ]);
+});
+
+test('show-top-bar-icon is a boolean, true by default', () => {
+    const key = loadSchema().get_key('show-top-bar-icon');
+    assertEqual(key.get_value_type().dup_string(), 'b', 'type');
+    assertEqual(key.get_default_value().unpack(), true, 'default');
 });
 
 test('full-battery-action defaults to off and offers off, notify and switch', () => {
