@@ -8,10 +8,10 @@ A GNOME Shell extension that switches **Battery Charging** between **Maximize Ch
 </p>
 
 - **The toggle** is lit while Preserve Battery Health is on. Click it to switch modes, or open its menu to pick one.
-- **The setting** is UPower's, the same one GNOME Settings' Power page shows, so the two always agree. The extension never stores it; it stores only its own settings for the Full-battery action (below).
+- **The setting** is UPower's, the same one GNOME Settings' Power page shows, so the two always agree. The extension never stores it; it stores only its own preferences (below).
 - **Every supporting battery** (a laptop battery whose firmware lets UPower limit its charge) is switched together. The toggle is hidden on machines without one.
 - **A refused switch** (for example from a remote or inactive session) snaps the toggle back and posts a notification.
-- **On GNOME 50**, a battery icon with a heart shows in the top bar while Preserve Battery Health is on.
+- **On GNOME 50**, a battery icon with a heart shows in the top bar while Preserve Battery Health is on. Turn off **Show Top-Bar Icon** in the preferences (below) to hide it.
 
   <img src="docs/screenshots/top-bar.png" alt="The top bar with the battery-and-heart icon at its left">
 
@@ -29,21 +29,26 @@ Charging to full and staying there wears a battery. The Full-battery action acts
 - **Notify**: a "Battery Fully Charged" notification offers **Preserve Battery Health**, which switches, and **Remind Me Later** (left out when Remind Every is 0). It comes back at the Remind Every interval until you switch, dismiss it, or the battery stops being Full. Dismissing it ends the reminders until the next full charge.
 - **Switch to Preserve Battery Health**: the extension switches by itself and posts a "Switched to Preserve Battery Health" notification. To undo, switch back to Maximize Charge from Quick Settings.
 
-Set it in the extension's preferences window: open it from the Extensions app, or run
+Set it in the preferences window (below). Switching to Maximize Charge while the battery is already full counts as your choice for that charge: nothing more happens until the battery stops being Full. The action also runs while the screen is locked.
+
+## Preferences
+
+Open the preferences window from the Extensions app, or run
 
 ```sh
 gnome-extensions prefs battery-charging@stanleygoldman.github.io
 ```
 
-<img src="docs/screenshots/prefs.png" alt="The preferences window: When Fully Charged set to Notify, Wait Before Acting 30, Remind Every 60" width="560">
+<img src="docs/screenshots/prefs.png" alt="The preferences window: Show Top-Bar Icon on; When Fully Charged set to Notify, Wait Before Acting 30, Remind Every 60" width="560">
 
-| Setting | Default | Meaning |
-|---|---|---|
-| When Fully Charged | Do Nothing | One of the three choices above. |
-| Wait Before Acting | 30 minutes | How long the battery stays Full before the action. 0 acts at once. Time asleep counts. |
-| Remind Every | 60 minutes | Notify only: the time between reminders. 0 notifies once. |
+Changes apply at once.
 
-Switching to Maximize Charge while the battery is already full counts as your choice for that charge: nothing more happens until the battery stops being Full. The action also runs while the screen is locked.
+| Group | Setting | Default | Meaning |
+|---|---|---|---|
+| Top Bar | Show Top-Bar Icon | On | Whether the heart icon shows in the top bar while Preserve Battery Health is on. It never shows on the lock screen. Quick Settings is unaffected. |
+| Full Battery | When Fully Charged | Do Nothing | One of the three Full-battery action choices above. |
+| Full Battery | Wait Before Acting | 30 minutes | How long the battery stays Full before the action. 0 acts at once. Time asleep counts. |
+| Full Battery | Remind Every | 60 minutes | Notify only: the time between reminders. 0 notifies once. |
 
 ## Installing
 

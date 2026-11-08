@@ -23,10 +23,11 @@ On the dev machine, with the extension installed by `make install` and nothing i
 - [ ] Restarting UPower (`sudo systemctl restart upower`) hides the toggle briefly, then it returns in the right state.
 - [ ] `gnome-extensions disable` then `enable`: the toggle goes and comes back. `journalctl --user -b | grep -iE 'battery-charging|Gjs-CRITICAL'` shows no errors.
 
-### The Full-battery action
+### The preferences and the Full-battery action
 
 Same setup. Open the preferences with `gnome-extensions prefs battery-charging@stanleygoldman.github.io`.
 
+- [ ] With Preserve Battery Health on, turning **Show Top-Bar Icon** off hides the heart icon in the top bar at once; turning it back on shows it again. The toggle stays.
 - [ ] The window shows "When Fully Charged" (Do Nothing), the wait (30) and the re-notify interval (60). The re-notify row is greyed out unless Notify is chosen.
 - [ ] Changed values are still there after closing and reopening the window.
 - [ ] **Notify:** set the wait to 0 and the interval to 1, with the battery at 100 % and Maximize Charge on. A "Battery Fully Charged" banner appears. **Remind Me Later** brings it back about a minute later. **Preserve Battery Health** switches, and the toggle and Settings follow.

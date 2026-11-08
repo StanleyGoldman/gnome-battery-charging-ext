@@ -1,4 +1,5 @@
-// The preferences window: the Full-battery action and its two timings (spec §5).
+// The preferences window: the Top-bar icon switch, then the Full-battery action and its two
+// timings (spec §5).
 // It runs in its own process and shares nothing with the shell side but the schema.
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
@@ -32,25 +33,34 @@ export default class BatteryChargingPreferences extends ExtensionPreferences {
         ];
 
         const page = new Adw.PreferencesPage();
-        const group = new Adw.PreferencesGroup();
-        page.add(group);
+        const topBarGroup = new Adw.PreferencesGroup({title: _('Top Bar')});
+        page.add(topBarGroup);
+        const fullBatteryGroup = new Adw.PreferencesGroup({title: _('Full Battery')});
+        page.add(fullBatteryGroup);
         window.add(page);
+
+        const topBarRow = new Adw.SwitchRow({
+            title: _('Show Top-Bar Icon'),
+            subtitle: _('While Preserve Battery Health is on'),
+        });
+        topBarGroup.add(topBarRow);
+        settings.bind('show-top-bar-icon', topBarRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         const actionRow = new Adw.ComboRow({
             title: _('When Fully Charged'),
             model: Gtk.StringList.new(actions.map(a => a.label)),
         });
-        group.add(actionRow);
+        fullBatteryGroup.add(actionRow);
 
         const waitRow = minutesRow(
             _('Wait Before Acting'),
             _('Minutes the battery stays fully charged first; 0 acts at once')
         );
-        group.add(waitRow);
+        fullBatteryGroup.add(waitRow);
         settings.bind('full-wait', waitRow, 'value', Gio.SettingsBindFlags.DEFAULT);
 
         const renotifyRow = minutesRow(_('Remind Every'), _('Minutes between notifications; 0 notifies once'));
-        group.add(renotifyRow);
+        fullBatteryGroup.add(renotifyRow);
         settings.bind('renotify-interval', renotifyRow, 'value', Gio.SettingsBindFlags.DEFAULT);
 
         // An enum key won't bind() to `selected`, so sync the combo by hand, both ways.

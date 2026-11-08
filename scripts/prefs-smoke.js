@@ -34,6 +34,8 @@ function rows(widget) {
 }
 
 for (const row of rows(window)) {
-    const value = row instanceof Adw.ComboRow ? `selected=${row.selected}` : `value=${row.value}`;
+    let value = `value=${row.value}`;
+    if (row instanceof Adw.ComboRow) value = `selected=${row.selected}`;
+    else if (row instanceof Adw.SwitchRow) value = `active=${row.active}`;
     print(`${row.constructor.name} "${row.title}" ${value} sensitive=${row.sensitive}`);
 }
